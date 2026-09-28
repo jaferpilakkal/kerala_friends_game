@@ -132,6 +132,8 @@
   const PROTOCOL = 'somewhere-kerala-v1';
   const PREFIX = 'somewhere-kerala-v1-';
   const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const JOIN_TIMEOUT_MS = 45000;
+  const HANDSHAKE_TIMEOUT_MS = 30000;
   const PEER_OPTIONS = {
     host:'0.peerjs.com', port:443, path:'/', secure:true, key:'peerjs', debug:1,
     config:{ iceServers:[
@@ -395,7 +397,7 @@
       trace(host?'room-registered':'guest-registered');
       if(state.playing){status(state.connected?'connected':'connecting',state.connected?'Connected · 2 here':'Waiting for friend');return;}
       if(host){enterWorld();status('connecting','Waiting for friend');line('','Share the room code above. Your friend will arrive by the jetty.',true);updateVoiceUI();}
-      else {trace('dialing-host',PREFIX+state.code);const c=peer.connect(PREFIX+state.code,{reliable:true,serialization:'json',metadata:{protocol:PROTOCOL}});bindConnection(c,session);state.joinTimer=setTimeout(()=>{if(session===state.session&&!state.connected){trace('join-timeout');failStart('Could not connect to that room. Keep the host tab open, check the code, or try another network. Last stage: '+state.connectStage+'; ICE: '+state.iceState+'.');}},22000);}
+      else {trace('dialing-host',PREFIX+state.code);const c=peer.connect(PREFIX+state.code,{reliable:true,serialization:'json',metadata:{protocol:PROTOCOL}});bindConnection(c,session);state.joinTimer=setTimeout(()=>{if(session===state.session&&!state.connected){trace('join-timeout');failStart('Could not connect to that room. Keep the host tab open, check the code, or try another network. Mobile data often needs a TURN relay; if ICE stays checking, the carrier may be blocking relay traffic. Last stage: '+state.connectStage+'; ICE: '+state.iceState+'.');}},JOIN_TIMEOUT_MS);}
     });
     peer.on('connection',c=>{
       if(session!==state.session||!host||c.metadata?.protocol!==PROTOCOL){reject(c,'This room uses a different version. Reload the same HTML file.');return;}
@@ -431,7 +433,7 @@
   function reject(c,reason){const timer=setTimeout(()=>c.close(),6000);c.on('error',()=>clearTimeout(timer));c.on('open',()=>{c.send({type:'reject',reason});setTimeout(()=>{clearTimeout(timer);c.close();},500);});}
   function bindConnection(c,session){
     trace('binding-data-channel',c.peer);
-    state.conn=c;let accepted=false;const handshakeTimer=setTimeout(()=>{if(session===state.session&&state.conn===c&&!accepted){c.close();if(state.host)dropConnection('The visitor could not finish connecting. The room is still open.');}},15000);
+    state.conn=c;let accepted=false;const handshakeTimer=setTimeout(()=>{if(session===state.session&&state.conn===c&&!accepted){c.close();if(state.host)dropConnection('The visitor could not finish connecting. The room is still open.');}},HANDSHAKE_TIMEOUT_MS);
     attachRtcDiagnostics(c,session);
     c.on('open',()=>{if(session!==state.session||state.conn!==c)return;trace('data-channel-open');send({type:'hello',protocol:PROTOCOL,name:state.name});});
     c.on('data',data=>{
