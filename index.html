@@ -13,6 +13,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#294b40">
+<meta name="application-version" content="0.2.0">
 <link rel="icon" href="data:,">
 <title>Somewhere in Kerala · Explore together</title>
 <style>
@@ -65,7 +66,7 @@
   .message { margin:7px 0 } .message strong { margin-right:7px } .message.system { color:#5c6b5b; font-size:11px }
   #chatForm { display:flex; gap:7px; margin:0 10px 10px } #chatInput { padding:8px 10px; font-size:12px }
   #chatForm button { font-size:12px; padding:7px 12px }
-  .voice-bar { display:flex; align-items:center; gap:10px; padding:10px; border-top:1px solid var(--line) }
+  .voice-bar { display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:10px; border-top:1px solid var(--line) }
   #voiceStatus { font-size:11px; line-height:1.35; flex:1 } #mic { min-width:82px }
   .map-box { position:absolute; bottom:25px; right:28px; width:184px; background:#f8f6edef; border-radius:12px; padding:12px }
   #map { display:block; width:160px; height:116px; border-radius:5px } .map-caption { display:flex; justify-content:space-between; margin-top:7px; font-size:10px; color:#455c4b }
@@ -84,6 +85,49 @@
   @media(max-width:400px) { .map-box { display:none } .chat { width:calc(100% - 24px) } }
   @media(max-width:760px) { .hud-top { display:block } .hud-brand { width:max-content } .session { margin:9px 0 0; width:100%; justify-content:space-between } #help { top:12px; right:12px; z-index:2 } #help[open] { box-shadow:0 8px 24px #24443822 } .zone { top:116px } #notice { top:205px } }
   @media(prefers-reduced-motion:reduce) { button { transition:none } }
+  .world-actions { position:absolute; bottom:105px; left:50%; transform:translateX(-50%); display:flex; gap:8px }
+  .world-actions button { min-height:44px; background:var(--paper) }
+  .world-panel { pointer-events:auto; position:absolute; right:28px; top:208px; width:340px; max-height:calc(100dvh - 420px); overflow:auto; padding:20px; background:var(--paper); border-radius:12px; box-shadow:0 8px 28px #163b2522; scrollbar-color:#839b82 var(--paper) }
+  .panel-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px }
+  .panel-head h2 { font:26px/1.15 Georgia,serif; margin:0 }
+  .panel-head button { min-height:44px }
+  .world-panel p { margin:10px 0; font-size:13px }
+  .choice-list { display:grid; gap:8px; margin-top:16px }
+  .choice-list button { white-space:normal; min-height:44px; text-align:left }
+  .choice-list button small { display:block; color:var(--muted); font-size:11px; margin-top:2px }
+  .emote-list { grid-template-columns:1fr 1fr }
+  #activityQuestion { font:23px/1.3 Georgia,serif; margin:18px 0 12px }
+  #activityProgress,#activityScore { font-size:12px; font-variant-numeric:tabular-nums }
+  #activityScore { padding:10px 0; border-bottom:1px solid var(--line) }
+  #activityTimer { float:right; font-variant-numeric:tabular-nums }
+  #activityFeedback { min-height:20px }
+  #activityAnswers button[data-result=correct] { border-color:#315943; background:#e0ead9 }
+  #activityAnswers button[data-result=wrong] { border-color:#933e2b; background:#f5e5db }
+  #activityAnswers button[aria-pressed=true] { box-shadow:inset 0 0 0 1px var(--accent) }
+  #activityAnswers button:disabled { opacity:1; cursor:default }
+  #activityMain { width:100%; margin-top:12px; min-height:44px }
+  #chatToggle { border:0; background:none; color:var(--ink); font-size:12px; font-weight:650; padding:0; text-align:left }
+  #proximityStatus { display:block; font-size:11px; color:var(--muted) }
+  .chat[data-open=false] #messages,.chat[data-open=false] #chatForm { display:none }
+  ::selection { color:#fffdf4; background:#315943 } input { caret-color:var(--accent) }
+  @media(max-width:760px) {
+    .map-box { display:none }
+    .chat { width:calc(100% - 24px) }
+    .chat-head { padding:10px 12px }
+    .chat:not([data-open=true]) #messages,.chat:not([data-open=true]) #chatForm { display:none }
+    .chat[data-open=true] #messages { height:100px }
+    .chat[data-open=true] { z-index:4 }
+    .world-actions { bottom:132px; left:12px; transform:none; width:152px; flex-wrap:wrap; gap:6px }
+    .world-actions button { flex:1; padding:8px 10px }
+    #interact { flex-basis:100% }
+    #touchPad { bottom:132px; right:12px }
+    #hud[data-chat=open] .world-actions,#hud[data-chat=open] #touchPad { bottom:282px }
+    .world-panel { top:auto; bottom:236px; left:12px; right:12px; width:auto; max-height:calc(100dvh - 355px); padding:16px; z-index:3 }
+    #activityPanel { top:216px; bottom:auto; max-height:calc(100dvh - 236px) }
+    #hud[data-panel=activity] .chat,#hud[data-panel=activity] .world-actions,#hud[data-panel=activity] #touchPad { display:none }
+    .zone p { max-width:calc(100vw - 34px) }
+  }
+  @media(max-height:620px) and (min-width:761px) { .world-panel { top:145px; max-height:calc(100dvh - 165px) } }
 </style>
 </head>
 <body>
@@ -99,17 +143,21 @@
     <form id="joinForm"><label for="roomInput">Room code</label><div class="join-row"><input id="roomInput" maxlength="6" placeholder="6 letters" autocomplete="off" spellcheck="false" required pattern="[A-Za-z2-9]{6}"><button id="join" class="secondary" disabled>Join</button></div></form>
     <p id="landingMessage" role="status">Preparing your little world…</p>
   </div>
-  <div class="landing-note"><strong>Space to wander.</strong>2 people · 3 places · absolutely no rush</div>
+  <div class="landing-note"><strong>Stay for a cup.</strong>2 people · 3 places · tea &amp; trivia · v0.2</div>
 </section>
 <main id="hud" hidden>
   <div class="hud-top"><div class="hud-brand"><div class="brand"><span class="brand-mark" aria-hidden="true">≈</span> somewhere</div></div><div class="session"><span id="connectionStatus" class="status" data-state="connecting" role="status">Connecting</span><button id="copyCode" class="secondary" title="Copy room code">······</button><button id="copyLink" class="secondary small-button">Invite link</button><button id="leave" class="secondary small-button">Leave</button></div></div>
   <section class="zone" aria-live="polite"><div id="zoneKicker" class="tiny">01 / by the water</div><h2 id="zoneName">The backwaters</h2><p id="zoneDescription">Find a little shade. Stay a little longer.</p></section>
   <div id="notice" role="status" hidden></div>
-  <details id="help"><summary>How to wander</summary><p><b>WASD / arrows</b> to walk, <b>Shift</b> to move faster. Drag the world to look around; scroll to zoom. Press <b>Enter</b> to chat, <b>Escape</b> to return to walking, <b>M</b> to mute.</p><p>Tea hills are northwest. The coastal town is northeast. Follow the pale paths; the wooden jetty is south.</p><p>Share your room code with one friend. Allow your microphone for voice. Use headphones when testing two tabs.</p><p>If voice is blocked, text chat still works. Remote devices need an HTTPS page for microphone access. Restrictive networks may prevent a direct peer connection.</p><button id="reconnect" class="secondary small-button">Reconnect</button></details>
-  <section class="chat" aria-label="Conversation"><div class="chat-head"><span>A little conversation</span><span id="playerCount" class="quiet">1 / 2 here</span></div><div id="messages" role="log" aria-live="polite"></div><form id="chatForm"><label for="chatInput" hidden>Message your friend</label><input id="chatInput" maxlength="400" placeholder="Say something…" autocomplete="off" disabled><button id="sendChat" class="primary" disabled>Send</button></form><div class="voice-bar"><button id="mic" class="secondary small-button" aria-pressed="false">Enable mic</button><span id="voiceStatus" role="status">Voice is getting ready</span><button id="hear" class="secondary small-button" hidden>Hear friend</button></div></section>
+  <details id="help"><summary>How to wander</summary><p><b>WASD / arrows</b> to walk, <b>Shift</b> to move faster. Drag the world to look around; scroll to zoom. Press <b>Enter</b> to chat, <b>Escape</b> to return to walking, <b>M</b> to mute.</p><p>Use <b>Travel</b> to visit the tea hills, old coast or backwater tea shop. Open <b>Emotes</b> to wave, sit or dance. Walk near the tea table and press <b>E</b> to play five questions together.</p><p>Share your room code with one friend. Voice fades as you walk apart and returns when you meet. Use headphones when testing two tabs.</p><p>If voice is blocked, text chat still works. Remote devices need an HTTPS page for microphone access. Restrictive networks may prevent a direct peer connection.</p><button id="reconnect" class="secondary small-button">Reconnect</button></details>
+  <section class="chat" aria-label="Conversation"><div class="chat-head"><button id="chatToggle" aria-expanded="false" aria-controls="messages chatForm">Conversation</button><span id="playerCount" class="quiet">1 / 2 here</span></div><div id="messages" role="log" aria-live="polite"></div><form id="chatForm"><label for="chatInput" hidden>Message your friend</label><input id="chatInput" maxlength="400" placeholder="Say something…" autocomplete="off" disabled><button id="sendChat" class="primary" disabled>Send</button></form><div class="voice-bar"><button id="mic" class="secondary small-button" aria-pressed="false">Enable mic</button><div style="flex:1"><span id="voiceStatus" role="status">Voice is getting ready</span><span id="proximityStatus">Voice carries nearby</span></div><button id="hear" class="secondary small-button" hidden>Hear friend</button><button id="retryVoice" class="secondary small-button" hidden>Retry voice</button></div></section>
   <div class="controls"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> wander &nbsp; <kbd>⇧</kbd> faster<span>Drag to look · Scroll to zoom · Enter to chat</span></div>
   <aside class="map-box" aria-label="World map"><canvas id="map" width="320" height="232"></canvas><div class="map-caption"><span>● you &nbsp; ○ friend</span><span>N ↑</span></div></aside>
   <div id="touchPad" aria-label="Touch movement"><button data-key="ArrowUp" aria-label="Forward">↑</button><button data-key="ArrowLeft" aria-label="Left">←</button><button data-key="ArrowDown" aria-label="Back">↓</button><button data-key="ArrowRight" aria-label="Right">→</button></div>
+  <nav class="world-actions" aria-label="Things to do"><button id="travel" class="secondary" aria-expanded="false" aria-controls="travelPanel">Travel</button><button id="emotes" class="secondary" aria-expanded="false" aria-controls="emotePanel">Emotes</button><button id="interact" class="secondary" hidden>Tea table · E</button></nav>
+  <section id="travelPanel" class="world-panel" aria-labelledby="travelTitle" hidden><div class="panel-head"><h2 id="travelTitle">Take a little trip</h2><button class="secondary small-button" data-close-panel>Close</button></div><p>Three corners of our little Kerala. Your friend can follow from their travel menu.</p><div id="travelChoices" class="choice-list"></div></section>
+  <section id="emotePanel" class="world-panel" aria-labelledby="emoteTitle" hidden><div class="panel-head"><h2 id="emoteTitle">Say it without words</h2><button class="secondary small-button" data-close-panel>Close</button></div><div id="emoteChoices" class="choice-list emote-list"></div></section>
+  <section id="activityPanel" class="world-panel" aria-labelledby="activityTitle" hidden><div class="panel-head"><h2 id="activityTitle">Tea &amp; trivia</h2><button id="closeActivity" class="secondary small-button">Leave table</button></div><p id="activityIntro">Pull up a chair with your friend. Five questions, a little Kerala, and time for tea.</p><div id="activityScore"></div><p id="activityProgress"><span id="activityRound">Two seats by the water</span><span id="activityTimer"></span></p><h3 id="activityQuestion"></h3><div id="activityAnswers" class="choice-list"></div><p id="activityFeedback" role="status"></p><button id="activityMain" class="primary">Take a seat</button></section>
 </main>
 <audio id="remoteAudio" autoplay playsinline></audio>
 <div id="fatal" hidden role="alert"></div>
@@ -129,7 +177,7 @@
   // === CONFIGURATION =========================================================
   // Extend ZONES, terrainHeight(), and buildWorld() to add new destinations.
   // Room IDs are namespaced to avoid collisions with unrelated PeerJS apps.
-  const PROTOCOL = 'somewhere-kerala-v1';
+  const PROTOCOL = 'somewhere-kerala-v2';
   const PREFIX = 'somewhere-kerala-v1-';
   const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   const JOIN_TIMEOUT_MS = 45000;
@@ -156,7 +204,7 @@
   const state = { playing:false,host:false,code:'',name:'Traveller',peer:null,conn:null,
     connected:false,remoteName:'Friend',lastSeen:0,session:0,muted:false,
     stream:null,micPending:null,micSettled:false,remoteMic:null,call:null,
-    voiceTimer:null,joinTimer:null,brokerTimer:null,retryTimer:null,voiceLive:false,voiceError:'',sequence:0,receivedSequence:-1,
+    voiceTimer:null,voiceRetryTimer:null,joinTimer:null,brokerTimer:null,retryTimer:null,voiceLive:false,voiceError:'',sequence:0,receivedSequence:-1,
     connectStage:'idle',rtcState:'new',iceState:'new',lastPeerError:'' };
   const keys = new Set(), obstacles = [], boats = [], palms = [];
   let zoneIndex = -1, scene,renderer,camera,localAvatar,remoteAvatar,water,fireflies;
@@ -165,6 +213,21 @@
   const localPosition = new THREE.Vector3(-1.5,0,19), cameraTarget = new THREE.Vector3();
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const materials = new Map(), geometries = new Map();
+  const DESTINATIONS = [
+    {id:'backwaters',name:'Backwater tea shop',detail:'A seat by the jetty · Tea & trivia',x:0,z:25},
+    {id:'hills',name:'Munnar-inspired tea hills',detail:'Take the winding path into the green',x:-35,z:-24},
+    {id:'coast',name:'Kochi-inspired old coast',detail:'Tiled verandas and fishing nets',x:25,z:-6}
+  ];
+  const INTERACTIONS = [
+    {id:'wave',label:'Wave',message:'waved hello',duration:3500},
+    {id:'sit',label:'Sit',message:'sat down for a while',duration:20000},
+    {id:'dance',label:'Dance',message:'started a little dance',duration:6500},
+    {id:'laugh',label:'Laugh',message:'shared a laugh',duration:3500},
+    {id:'point',label:'Point',message:'pointed out the view',duration:3500},
+    {id:'greet',label:'Greet',message:'said namaskaram',duration:3500}
+  ];
+  const TEA_TABLE = {x:3,z:22,radius:6};
+  let socialPanel='',lastEmote=0,lastRemoteEmote=0,lastTravel=0,activityView=null,activityRevision=-1,activityDeadline=0;
 
   function material(color) {
     if (!materials.has(color)) materials.set(color,new THREE.MeshStandardMaterial({color,roughness:1,flatShading:true}));
@@ -301,6 +364,7 @@
     const fp=[];for(let i=0;i<45;i++){const x=(random()-.5)*65,z=random()*45-15;fp.push(x,ground(x,z)+1+random()*2,z);}
     const fg=new THREE.BufferGeometry();fg.setAttribute('position',new THREE.Float32BufferAttribute(fp,3));fireflies=new THREE.Points(fg,new THREE.PointsMaterial({color:'#fff1b0',size:.09,transparent:true,opacity:.65}));scene.add(fireflies);
     localAvatar=avatar('#cc7e50');remoteAvatar=avatar('#557eab');remoteAvatar.visible=false;localAvatar.visible=false;
+    buildTeaShop();
     localPosition.y=ground(localPosition.x,localPosition.z);localAvatar.position.copy(localPosition);
   }
   // A simple friendly traveller: low-poly capsule, hat, backpack, and swinging feet.
@@ -310,7 +374,9 @@
     mesh('SphereGeometry',[.31,10,7],'#efc7a0',0,1.58,0,body);
     mesh('CylinderGeometry',[.52,.52,.07,12],'#ecdfb4',0,1.83,0,body);mesh('CylinderGeometry',[.3,.34,.22,10],'#d4c496',0,1.96,0,body);
     box(.43,.53,.25,'#788970',0,1.04,-.32,body);const feet=[];
-    for(const side of [-1,1]){feet.push(box(.19,.45,.24,'#4a6150',side*.19,.3,0,g));mesh('SphereGeometry',[.13,6,4],'#efc7a0',side*.4,.83,.01,body);mesh('SphereGeometry',[.028,5,4],'#394a3c',side*.11,1.6,.29,body);}
+    const hands=[];
+    for(const side of [-1,1]){feet.push(box(.19,.45,.24,'#4a6150',side*.19,.3,0,g));hands.push(mesh('SphereGeometry',[.13,6,4],'#efc7a0',side*.4,.83,.01,body));mesh('SphereGeometry',[.028,5,4],'#394a3c',side*.11,1.6,.29,body);}
+    g.userData.hands=hands;
     g.userData.feet=feet;setNametag(g,'Traveller');return g;
   }
   function setNametag(g,text) {
@@ -327,7 +393,9 @@
   function move(dt) {
     let dx=Number(keys.has('KeyD')||keys.has('ArrowRight'))-Number(keys.has('KeyA')||keys.has('ArrowLeft'));
     let dz=Number(keys.has('KeyS')||keys.has('ArrowDown'))-Number(keys.has('KeyW')||keys.has('ArrowUp'));
+    if(socialPanel==='activity'){dx=0;dz=0;}
     const moving=dx!==0||dz!==0;
+    if(moving&&localAvatar.userData.emote?.id==='sit'){localAvatar.userData.emote=null;send({type:'emote',id:'stop'});}
     if(moving){const length=Math.hypot(dx,dz);dx/=length;dz/=length;const vx=dx*Math.cos(yaw)+dz*Math.sin(yaw),vz=-dx*Math.sin(yaw)+dz*Math.cos(yaw),speed=keys.has('ShiftLeft')||keys.has('ShiftRight')?8:4.5;
       const nx=localPosition.x+vx*speed*dt,nz=localPosition.z+vz*speed*dt;
       if(walkable(nx,localPosition.z))localPosition.x=nx;if(walkable(localPosition.x,nz))localPosition.z=nz;
@@ -336,7 +404,19 @@
     localPosition.y=footHeight(localPosition.x,localPosition.z);localAvatar.position.copy(localPosition);
     animateAvatar(localAvatar,moving,walkPhase);updateZone();
   }
-  function animateAvatar(g,moving,phase) {g.userData.body.position.y=moving&&!reduceMotion?Math.abs(Math.sin(phase))*.06:0;g.userData.feet.forEach((f,i)=>f.rotation.x=moving?Math.sin(phase+i*Math.PI)*.45:0);}
+  function animateAvatar(g,moving,phase) {
+    const body=g.userData.body,hands=g.userData.hands;body.position.y=moving&&!reduceMotion?Math.abs(Math.sin(phase))*.06:0;body.rotation.set(0,0,0);
+    g.userData.feet.forEach((f,i)=>{f.rotation.x=moving&&!reduceMotion?Math.sin(phase+i*Math.PI)*.45:0;f.position.z=0;});
+    hands.forEach((h,i)=>h.position.set(i===0?-.4:.4,.83,.01));
+    const emote=g.userData.emote;if(!emote)return;if(performance.now()>emote.until){g.userData.emote=null;return;}
+    const t=reduceMotion?0:(performance.now()-emote.started)/1000;
+    if(emote.id==='wave'){hands[1].position.set(.5+Math.sin(t*12)*.12,1.85,.05);}
+    if(emote.id==='greet'){hands[0].position.set(-.1,1.22,.4);hands[1].position.set(.1,1.22,.4);body.rotation.x=.12;}
+    if(emote.id==='point')hands[1].position.set(.55,1.25,.55);
+    if(emote.id==='sit'){body.position.y=-.4;g.userData.feet.forEach(f=>{f.rotation.x=-1.2;f.position.z=.25;});}
+    if(emote.id==='dance'){body.rotation.z=Math.sin(t*7)*.18;body.position.y=Math.abs(Math.sin(t*7))*.18;hands.forEach((h,i)=>h.position.set(i===0?-.6:.6,1.3+Math.sin(t*7+i)*.25,.05));}
+    if(emote.id==='laugh'){body.rotation.x=-.12;body.position.y=Math.sin(t*16)*.035;hands[0].position.set(-.2,.95,.35);}
+  }
   function drawMap() {
     const cx=$('map').getContext('2d'),W=320,H=232;cx.clearRect(0,0,W,H);cx.fillStyle='#b1d0c6';cx.fillRect(0,0,W,H);
     const point=(x,z)=>[W/2+x*2,H/2+z*2];cx.beginPath();for(let i=0;i<=100;i++){const a=i/100*Math.PI*2,[x,y]=point(Math.cos(a)*64*coastRadius(a),Math.sin(a)*43*coastRadius(a));i?cx.lineTo(x,y):cx.moveTo(x,y);}cx.fillStyle='#c9d5ae';cx.fill();
@@ -349,7 +429,7 @@
     requestAnimationFrame(frame);const dt=Math.min((now-lastFrame)/1000,.05);lastFrame=now;elapsed+=dt;
     if(state.playing){move(dt);if(state.connected){const d=remoteAvatar.position.distanceTo(remoteTarget);remoteMoving=d>.055;remoteAvatar.position.lerp(remoteTarget,1-Math.exp(-12*dt));remoteAvatar.rotation.y+=Math.atan2(Math.sin(remoteRotation-remoteAvatar.rotation.y),Math.cos(remoteRotation-remoteAvatar.rotation.y))*(1-Math.exp(-14*dt));animateAvatar(remoteAvatar,remoteMoving,elapsed*10);}
       cameraTarget.copy(localPosition);cameraTarget.y+=1.2;const wanted=new THREE.Vector3(Math.sin(yaw)*Math.cos(pitch)*distance,Math.sin(pitch)*distance,Math.cos(yaw)*Math.cos(pitch)*distance).add(cameraTarget);wanted.y=Math.max(wanted.y,ground(wanted.x,wanted.z)+2);camera.position.lerp(wanted,reduceMotion?1:1-Math.exp(-7*dt));camera.lookAt(cameraTarget);
-      if(now-lastMap>120){drawMap();lastMap=now;}
+      if(now-lastMap>120){drawMap();updateSocialWorld();lastMap=now;}
     }else{camera.position.set(79,67,99);camera.lookAt(2,0,-2);}
     if(!reduceMotion){boats.forEach((b,i)=>{b.position.y=.35+Math.sin(elapsed*.7+i)*.08;b.rotation.z=Math.sin(elapsed*.55+i)*.013;});palms.forEach((p,i)=>p.rotation.z=Math.sin(elapsed*.65+i)*.024);fireflies.position.y=Math.sin(elapsed*.8)*.17;}
     renderer.render(scene,camera);
@@ -372,13 +452,14 @@
   function cleanName(name){return typeof name==='string'?name.replace(/[\u0000-\u001f\u007f]/g,'').trim().slice(0,20)||'Traveller':'Traveller';}
   function enterWorld(){state.playing=true;$('landing').hidden=true;$('hud').hidden=false;localAvatar.visible=true;$('copyCode').textContent=state.code;$('world').focus();updateZone();}
   function resetSession(showLanding=true){
-    state.session++;clearTimeout(state.joinTimer);clearTimeout(state.brokerTimer);clearTimeout(state.retryTimer);clearTimeout(state.voiceTimer);
+    state.session++;clearTimeout(state.joinTimer);clearTimeout(state.brokerTimer);clearTimeout(state.retryTimer);clearTimeout(state.voiceTimer);clearTimeout(state.voiceRetryTimer);
     const p=state.peer,c=state.conn,call=state.call;state.peer=null;state.conn=null;state.call=null;state.connected=false;state.voiceLive=false;state.playing=false;
     if(c)c.close();if(call)call.close();if(p)p.destroy();if(state.stream)state.stream.getTracks().forEach(t=>t.stop());
-    state.stream=null;state.micPending=null;state.micSettled=false;state.remoteMic=null;state.muted=false;state.voiceError='';state.receivedSequence=-1;keys.clear();
+    state.stream=null;state.micPending=null;state.voiceRetryTimer=null;state.micSettled=false;state.remoteMic=null;state.muted=false;state.voiceError='';state.receivedSequence=-1;keys.clear();
     state.connectStage='idle';state.rtcState='new';state.iceState='new';state.lastPeerError='';
-    $('remoteAudio').srcObject=null;$('hear').hidden=true;$('chatInput').disabled=true;$('sendChat').disabled=true;$('playerCount').textContent='1 / 2 here';
+    $('remoteAudio').srcObject=null;$('hear').hidden=true;$('retryVoice').hidden=true;$('chatInput').disabled=true;$('sendChat').disabled=true;$('playerCount').textContent='1 / 2 here';
     localAvatar.visible=false;remoteAvatar.visible=false;$('messages').replaceChildren();$('notice').hidden=true;
+    resetSocial();
     if(showLanding){$('landing').hidden=false;$('hud').hidden=true;busy(false);$('landingMessage').className='';$('landingMessage').textContent='Your next little escape is ready.';}
   }
   function start(host,collisionRetry=0){
@@ -423,7 +504,7 @@
       const message=messages[err.type]||'Connection error: '+err.type+'. Please reconnect or create a new room.';
       if(!state.playing)failStart(message);else{notice(message,true);if(!state.connected)status('disconnected','Disconnected');}
     });
-    peer.on('close',()=>{if(session===state.session){if(!state.playing)failStart('The signaling connection closed. Please try again.');else{status('disconnected','Disconnected');notice('Your room closed. Leave and create or join a room again.',true);}}});
+    peer.on('close',()=>{if(session===state.session){if(!state.playing)failStart('The signaling connection closed. Please try again.');else{dropConnection('Your room closed.');status('disconnected','Disconnected');notice('Your room closed. Reconnect, or leave to create or join a room again.',true);}}});
   }
   function failStart(message){
     const connection={stage:state.connectStage,rtc:state.rtcState,ice:state.iceState,lastPeerError:state.lastPeerError};
@@ -446,8 +527,11 @@
       switch(data.type){
         case 'position': if([data.x,data.z,data.r,data.seq].every(Number.isFinite)&&data.seq>state.receivedSequence&&Math.abs(data.x)<70&&Math.abs(data.z)<50){state.receivedSequence=data.seq;remoteTarget.set(data.x,footHeight(data.x,data.z),data.z);remoteRotation=data.r;}break;
         case 'chat': if(typeof data.text==='string'&&data.text.trim())line(state.remoteName,data.text.slice(0,400));break;
-        case 'media': state.remoteMic={ready:data.ready===true,settled:data.settled===true,muted:data.muted===true};updateVoiceUI();maybeCall();break;
-        case 'voice-reset': closeCall();setTimeout(()=>{if(session===state.session)maybeCall();},500);break;
+        case 'media': {const previous=state.remoteMic;state.remoteMic={ready:data.ready===true,settled:data.settled===true,muted:data.muted===true};updateVoiceUI();if(!previous||previous.ready!==state.remoteMic.ready||previous.settled!==state.remoteMic.settled)maybeCall();break;}
+        case 'voice-reset': closeCall();queueVoiceRetry();break;
+        case 'emote': receiveEmote(data.id);break;
+        case 'activity-action': if(state.host)activityAction(data,'guest');break;
+        case 'activity-state': if(!state.host)receiveActivity(data);break;
         case 'ping': send({type:'pong'});break;
         case 'bye': dropConnection('Your friend left.');break;
       }
@@ -475,16 +559,194 @@
     if(!state.playing)enterWorld();remoteTarget.set(state.host?1.5:-1.5,footHeight(0,19),19);remoteAvatar.position.copy(remoteTarget);remoteAvatar.visible=true;setNametag(remoteAvatar,state.remoteName);
     status('connected','Connected · 2 here');$('playerCount').textContent='2 / 2 here';$('chatInput').disabled=false;$('sendChat').disabled=false;
     line('',state.remoteName+' is here. Take the scenic route together.',true);notice(state.remoteName+' joined your world.');send(positionPacket());send(mediaPacket());updateVoiceUI();
+    if(state.host)publishActivity();
   }
   function dropConnection(message){
-    const c=state.conn;state.conn=null;state.connected=false;state.remoteMic=null;state.receivedSequence=-1;if(c)c.close();closeCall();remoteAvatar.visible=false;
+    const c=state.conn;state.conn=null;state.connected=false;state.remoteMic=null;state.receivedSequence=-1;state.rtcState='closed';state.iceState='closed';state.connectStage='disconnected';if(c)c.close();closeCall();remoteAvatar.visible=false;
     $('chatInput').disabled=true;$('sendChat').disabled=true;$('playerCount').textContent='1 / 2 here';
     status('disconnected',state.host?'Disconnected · room open':'Disconnected');line('',message,true);
     notice(message+(state.host?' Your room is still open for them to rejoin.':' Open “How to wander” and reconnect, or leave to join another room.'),true);updateVoiceUI();
+    resetSocial();
   }
   // Send outside requestAnimationFrame, so background tabs still send heartbeats.
   setInterval(()=>{if(state.connected&&state.conn?.open){if((state.conn.dataChannel?.bufferedAmount||0)<32768)send(positionPacket());}},1000/12);
   setInterval(()=>{if(state.connected){send({type:'ping'});if(Date.now()-state.lastSeen>45000&&!document.hidden)dropConnection('Your friend is no longer responding.');}},4000);
+
+  // === ACTIVITY RULES ========================================================
+  // The host owns revisions, deadlines and scores. Guests send bounded intents.
+  // Rules have no renderer or PeerJS dependency; another activity can supply its
+  // own question set while using the same seating and round lifecycle.
+  const TEA_QUIZ = [
+    {q:'Which sea lies to the west of Kerala?',options:['Arabian Sea','Bay of Bengal','Red Sea'],answer:0,note:'The Arabian Sea follows Kerala’s western coast.'},
+    {q:'What grows in the green rows around Munnar?',options:['Wheat','Tea','Cactus'],answer:1,note:'Munnar’s hills are known for their tea plantations.'},
+    {q:'Which landscape is Alappuzha known for?',options:['Desert dunes','Snowfields','Backwaters'],answer:2,note:'Canals, paddy fields and houseboats shape the Alappuzha backwaters.'},
+    {q:'How many districts make up Kerala?',options:['10','14','18'],answer:1,note:'Kerala has 14 districts, from Kasaragod to Thiruvananthapuram.'},
+    {q:'What stands along the Fort Kochi waterfront?',options:['Chinese fishing nets','Windmills','Ski lifts'],answer:0,note:'The large shore-operated Chinese fishing nets are a familiar Kochi landmark.'}
+  ];
+  class ActivityManager {
+    constructor(questions,onChange,now=()=>Date.now()) {this.questions=questions;this.onChange=onChange;this.now=now;this.revision=0;this.game=null;}
+    changed(){this.revision++;this.onChange();}
+    reset(){this.game=null;this.changed();}
+    act(action,actor,near){
+      if(!action||!['host','guest'].includes(actor))return false;
+      let g=this.game;
+      if(action.action==='join'){
+        if(!near||g&&g.phase!=='waiting')return false;
+        if(!g){g=this.game={id:crypto.randomUUID(),phase:'waiting',seats:{host:false,guest:false},scores:{host:0,guest:0},answers:{},order:[],index:0,deadline:0};}
+        if(g.seats[actor])return false;g.seats[actor]=true;
+      }else{
+        if(!g||!g.seats[actor])return false;
+        if(action.action==='leave'&&(!action.game||action.game===g.id)){this.reset();return true;}
+        if(action.game!==g.id)return false;
+        if(action.action==='start'){
+          if(actor!=='host'||!g.seats.host||!g.seats.guest||!['waiting','finished'].includes(g.phase))return false;
+          g.order=this.questions.map((_,i)=>i);
+          for(let i=g.order.length-1;i>0;i--){const j=crypto.getRandomValues(new Uint32Array(1))[0]%(i+1);[g.order[i],g.order[j]]=[g.order[j],g.order[i]];}
+          g.index=0;g.scores={host:0,guest:0};this.nextQuestion();
+        }else if(action.action==='answer'){
+          if(g.phase!=='question'||action.round!==g.index||this.now()>=g.deadline||Object.hasOwn(g.answers,actor)||!Number.isInteger(action.choice)||action.choice<0||action.choice>=this.questions[g.order[g.index]].options.length)return false;
+          g.answers[actor]=action.choice;
+          if(Object.hasOwn(g.answers,'host')&&Object.hasOwn(g.answers,'guest'))this.reveal();
+        }else if(action.action==='next'){
+          if(actor!=='host'||g.phase!=='reveal'||action.round!==g.index)return false;
+          if(g.index===g.order.length-1)g.phase='finished';else{g.index++;this.nextQuestion();}
+        }else return false;
+      }
+      this.changed();return true;
+    }
+    nextQuestion(){const g=this.game;g.phase='question';g.answers={};g.deadline=this.now()+25000;}
+    reveal(){const g=this.game;if(g.phase!=='question')return;const q=this.questions[g.order[g.index]];for(const actor of ['host','guest'])if(g.answers[actor]===q.answer)g.scores[actor]++;g.phase='reveal';}
+    tick(){if(this.game?.phase==='question'&&this.now()>=this.game.deadline){this.reveal();this.changed();}}
+    snapshot(actor){
+      const g=this.game;if(!g)return {revision:this.revision,game:null};
+      const q=g.order.length?this.questions[g.order[g.index]]:null,revealed=['reveal','finished'].includes(g.phase);
+      return {revision:this.revision,game:{id:g.id,phase:g.phase,seats:{...g.seats},scores:{...g.scores},index:g.index,total:this.questions.length,
+        answered:{host:Object.hasOwn(g.answers,'host'),guest:Object.hasOwn(g.answers,'guest')},selected:g.answers[actor]??null,
+        question:q?{title:q.q,options:[...q.options]}:null,correct:revealed?q.answer:null,note:revealed?q.note:'',remaining:Math.max(0,g.deadline-this.now())}};
+    }
+  }
+  // === SOCIAL WORLD ==========================================================
+  const activities=new ActivityManager(TEA_QUIZ,publishActivity);
+  function buildTeaShop(){
+    const x=TEA_TABLE.x,z=TEA_TABLE.z,y=ground(x,z),g=new THREE.Group();scene.add(g);g.position.set(x,y,z);
+    // Open stall, sloping terracotta awning, counter, kettle and two tea glasses.
+    for(const dx of [2.4,5.4])for(const dz of [-1.5,1.5])rod([dx,0,dz],[dx,2.8,dz],.07,'#775f44',g);
+    const roof=box(3.7,.16,4,'#b87950',3.9,2.85,0,g);roof.rotation.x=-.12;
+    box(2.8,.15,1,'#94744f',3.9,1.1,-.8,g);box(2.8,.85,.1,'#d6c396',3.9,.6,-1.25,g);
+    mesh('SphereGeometry',[.25,8,6],'#728e88',4.3,1.4,-.8,g);rod([4.4,1.4,-.8],[4.7,1.58,-.8],.06,'#728e88',g);
+    mesh('CylinderGeometry',[.9,.9,.15,12],'#ad865b',0,.9,0,g);rod([0,0,0],[0,.9,0],.12,'#755f47',g);
+    for(const side of [-1,1]){box(.8,.14,.7,'#ad865b',side*1.3,.42,0,g);for(const leg of [-.25,.25])rod([side*1.3+leg,0,0],[side*1.3+leg,.42,0],.06,'#755f47',g);mesh('CylinderGeometry',[.1,.07,.2,8],'#e8d9b3',side*.35,1.07,0,g);}
+    obstacles.push({x,z,r:.75},{x:x+3.9,z:z-.8,r:.8});
+    sign(8,24,'CHAYA · TEA','A little conversation. A little trivia.');
+    path([[0,25],[1,24],[2,23.5]],1.3);
+  }
+  function nearTable(p){return Math.hypot(p.x-TEA_TABLE.x,p.z-TEA_TABLE.z)<=TEA_TABLE.radius;}
+  function localSeat(){return state.host?'host':'guest';}
+  function setPanel(panel){
+    if(socialPanel==='activity'&&panel!=='activity')submitActivity('leave');
+    if(panel&&matchMedia('(max-width:760px)').matches)showChat(false);
+    socialPanel=panel;keys.clear();$('hud').dataset.panel=panel;
+    $('travelPanel').hidden=panel!=='travel';$('emotePanel').hidden=panel!=='emote';$('activityPanel').hidden=panel!=='activity';
+    $('travel').setAttribute('aria-expanded',String(panel==='travel'));$('emotes').setAttribute('aria-expanded',String(panel==='emote'));
+    if(panel==='activity')renderActivity();
+  }
+  function travelTo(id){
+    const target=DESTINATIONS.find(d=>d.id===id);if(!state.playing||!target)return;
+    if(activityView?.seats[localSeat()]){notice('Leave the tea table before travelling.');return;}
+    if(Date.now()-lastTravel<1200)return;lastTravel=Date.now();
+    const x=target.x+(state.host?-.5:.5);if(!walkable(x,target.z)){notice('The path is blocked. Try walking to this spot.');return;}
+    localPosition.set(x,footHeight(x,target.z),target.z);localAvatar.position.copy(localPosition);localAvatar.userData.emote=null;
+    setPanel('');$('world').focus();updateZone();send(positionPacket());send({type:'emote',id:'stop'});updateSocialWorld();
+    notice('Arrived at '+target.name+'.');
+  }
+  function playEmote(g,id){const def=INTERACTIONS.find(i=>i.id===id);if(!def)return;const now=performance.now();g.userData.emote={id,started:now,until:now+def.duration};}
+  function chooseEmote(id){
+    const def=INTERACTIONS.find(i=>i.id===id);if(!state.playing||!def||Date.now()-lastEmote<900)return;
+    lastEmote=Date.now();playEmote(localAvatar,id);send({type:'emote',id});line('','You '+def.message+'.',true);setPanel('');$('world').focus();
+  }
+  function receiveEmote(id){
+    if(id==='stop'){remoteAvatar.userData.emote=null;return;}
+    const def=INTERACTIONS.find(i=>i.id===id);if(!def||Date.now()-lastRemoteEmote<800)return;
+    lastRemoteEmote=Date.now();playEmote(remoteAvatar,id);line('',state.remoteName+' '+def.message+'.',true);
+  }
+  function updateSocialWorld(){
+    $('interact').hidden=!nearTable(localPosition);
+    const distance=state.connected?Math.hypot(localPosition.x-remoteTarget.x,localPosition.z-remoteTarget.z):0;
+    // Local playback falloff. The established two-peer call stays warm for a
+    // natural return; this is an audibility feature, not a private voice channel.
+    const gain=state.connected?Math.max(0,Math.min(1,(28-distance)/20)):0;
+    $('remoteAudio').volume=gain;$('remoteAudio').muted=gain===0;
+    $('proximityStatus').textContent=!state.connected?'Voice carries nearby':distance>=28?'Friend is out of earshot':distance>8?'Friend’s voice is fading · move closer':'Your friend is within earshot';
+    if(socialPanel==='activity'&&!nearTable(localPosition))closeActivity();
+  }
+  function publishActivity(){
+    if(!state.host)return;
+    const snapshot=activities.snapshot('host');activityView=snapshot.game;activityRevision=snapshot.revision;activityDeadline=Date.now()+(activityView?.remaining||0);
+    send({type:'activity-state',...activities.snapshot('guest')});renderActivity();
+  }
+  function validActivity(g){
+    if(g===null)return true;
+    if(!g||typeof g.id!=='string'||g.id.length>64||!['waiting','question','reveal','finished'].includes(g.phase)||!Number.isInteger(g.index)||g.index<0||g.index>=5||g.total!==5||!Number.isFinite(g.remaining)||g.remaining<0||g.remaining>25000)return false;
+    for(const who of ['host','guest'])if(typeof g.seats?.[who]!=='boolean'||typeof g.answered?.[who]!=='boolean'||!Number.isInteger(g.scores?.[who])||g.scores[who]<0||g.scores[who]>5)return false;
+    if(g.selected!==null&&(!Number.isInteger(g.selected)||g.selected<0||g.selected>2))return false;
+    if(g.phase==='waiting')return g.question===null;
+    if(!g.question||typeof g.question.title!=='string'||g.question.title.length>180||!Array.isArray(g.question.options)||g.question.options.length!==3||!g.question.options.every(v=>typeof v==='string'&&v.length<=100)||typeof g.note!=='string'||g.note.length>250)return false;
+    return g.phase==='question'?g.correct===null:Number.isInteger(g.correct)&&g.correct>=0&&g.correct<3;
+  }
+  function receiveActivity(data){
+    if(!Number.isSafeInteger(data.revision)||data.revision<=activityRevision||!validActivity(data.game))return;
+    const wasSeated=activityView?.seats.guest;activityRevision=data.revision;activityView=data.game;activityDeadline=Date.now()+(activityView?.remaining||0);
+    if(wasSeated&&!activityView)notice('The table is free again. Take a seat to play another round.');renderActivity();
+  }
+  function activityAction(data,actor=localSeat()){
+    if(!state.connected)return;
+    if(state.host){
+      const changed=activities.act(data,actor,nearTable(actor==='host'?localPosition:remoteTarget));
+      if(!changed)publishActivity();
+    }else send({type:'activity-action',action:data.action,game:data.game,round:data.round,choice:data.choice});
+  }
+  function submitActivity(action,choice){activityAction({action,game:activityView?.id,round:activityView?.index,choice});}
+  function openActivity(){if(!state.playing||!nearTable(localPosition))return;setPanel('activity');$('activityMain').focus();}
+  function closeActivity(){
+    setPanel('');$('world').focus();
+  }
+  function renderActivity(){
+    if(socialPanel!=='activity')return;
+    const g=activityView,actor=localSeat(),seated=!!g?.seats[actor],button=$('activityMain');
+    $('activityAnswers').replaceChildren();$('activityQuestion').textContent='';$('activityTimer').textContent='';button.hidden=false;button.disabled=false;
+    $('activityIntro').hidden=!!g&&g.phase!=='waiting';
+    $('activityScore').textContent=g?(state.host?'You':state.remoteName)+': '+g.scores.host+'  ·  '+(state.host?state.remoteName:'You')+': '+g.scores.guest:'A fresh pot. A fresh score.';
+    $('activityRound').textContent=g&&g.phase!=='waiting'?'Question '+(g.index+1)+' of '+g.total:'Two seats by the water';
+    if(!state.connected){button.textContent='Invite a friend to play';button.disabled=true;$('activityFeedback').textContent='Share the room code above, then take a seat together.';return;}
+    if(!g||g.phase==='waiting'){
+      const ready=g?.seats.host&&g?.seats.guest;
+      button.textContent=!seated?'Take a seat':ready&&state.host?'Start five questions':'Waiting for '+(ready?'the host':'your friend');button.disabled=seated&&(!ready||!state.host);
+      button.onclick=()=>submitActivity(seated?'start':'join');
+      $('activityFeedback').textContent=ready?'Both seats are taken. Let’s play.':seated?'Ask your friend to travel to the Backwater tea shop and join you.':'Walk up to the table and join your friend.';return;
+    }
+    if(g.phase==='finished'){
+      const yours=g.scores[actor],theirs=g.scores[actor==='host'?'guest':'host'];
+      $('activityQuestion').textContent=yours===theirs?'A shared victory.':yours>theirs?'This round is yours.':'Your friend takes this round.';
+      $('activityFeedback').textContent='You got '+yours+' of '+g.total+' right. Stay for another cup?';button.textContent=state.host?'Play again':'Waiting for host to play again';button.disabled=!state.host;button.onclick=()=>submitActivity('start');return;
+    }
+    $('activityQuestion').textContent=g.question.title;
+    for(const [i,text] of g.question.options.entries()){
+      const answer=document.createElement('button');answer.className='secondary';answer.textContent=text;answer.dataset.choice=i;answer.setAttribute('aria-pressed',String(g.selected===i));
+      answer.disabled=!seated||g.phase!=='question'||g.answered[actor];
+      if(g.phase==='reveal')answer.dataset.result=i===g.correct?'correct':g.selected===i?'wrong':'';
+      answer.onclick=()=>{for(const b of $('activityAnswers').children)b.disabled=true;submitActivity('answer',i);};$('activityAnswers').append(answer);
+    }
+    if(g.phase==='question'){$('activityFeedback').textContent=g.answered[actor]?'Answer saved. Waiting for your friend…':'Pick one answer before the tea timer runs out.';button.hidden=true;}
+    else{$('activityFeedback').textContent='Answer: '+g.question.options[g.correct]+'. '+g.note;button.textContent=state.host?(g.index===g.total-1?'See results':'Next question'):'Waiting for the host';button.disabled=!state.host;button.onclick=()=>submitActivity('next');}
+  }
+  function resetSocial(){
+    activities.game=null;activities.revision=0;activityView=null;activityRevision=-1;activityDeadline=0;lastEmote=0;lastRemoteEmote=0;lastTravel=0;
+    localAvatar.userData.emote=null;remoteAvatar.userData.emote=null;setPanel('');$('remoteAudio').volume=0;
+  }
+  setInterval(()=>{
+    if(state.host&&state.connected)activities.tick();
+    if(socialPanel==='activity'&&activityView?.phase==='question')$('activityTimer').textContent=Math.max(0,Math.ceil((activityDeadline-Date.now())/1000))+'s';
+  },250);
 
   // === VOICE ================================================================
   // Media-state handshake elects exactly one caller. Host calls when both have
@@ -509,6 +771,8 @@
   }
   function updateVoiceUI(){
     $('mic').textContent=state.stream?(state.muted?'Unmute mic':'Mute mic'):'Enable mic';$('mic').setAttribute('aria-pressed',String(state.muted));
+    $('retryVoice').hidden=!state.connected||!state.micSettled||state.voiceLive||!!state.call;
+    $('retryVoice').disabled=!!state.voiceRetryTimer;
     let text;if(!state.micSettled)text='Allow microphone access for voice';else if(!state.stream)text=state.voiceLive?'Listening only · microphone unavailable':'Microphone unavailable · text chat works';else if(!state.connected)text='Mic ready · waiting for your friend';else if(state.voiceLive)text=state.muted?'Your mic is muted':state.remoteMic?.muted?'Voice connected · friend muted':'Voice connected';else if(state.remoteMic?.settled&&!state.remoteMic.ready)text='Friend has no mic · connecting one-way audio';else text='Connecting voice…';
     $('voiceStatus').textContent=state.connected&&state.voiceError?state.voiceError:text;
   }
@@ -518,25 +782,41 @@
     try{const call=state.peer.call(state.conn.peer,state.stream,{metadata:{protocol:PROTOCOL}});if(call)bindCall(call,state.session);}catch(err){console.warn(err);notice('Voice could not connect. Text chat is still available.');}
   }
   function bindCall(call,session){
-    state.call=call;state.voiceLive=false;state.voiceError='';
-    clearTimeout(state.voiceTimer);state.voiceTimer=setTimeout(()=>{if(session===state.session&&state.call===call&&!state.voiceLive){state.voiceError='Voice unavailable · click mic to retry';notice('Voice did not connect. Text chat still works. Click the mic button to retry.');closeCall();updateVoiceUI();}},18000);
+    state.call=call;state.voiceLive=false;state.voiceError='';updateVoiceUI();
+    clearTimeout(state.voiceTimer);state.voiceTimer=setTimeout(()=>{if(session===state.session&&state.call===call&&!state.voiceLive){state.voiceError='Voice unavailable · retry voice';notice('Voice did not connect. Text chat still works. Use Retry voice to reconnect.');closeCall();updateVoiceUI();}},18000);
     call.on('stream',async stream=>{
-      if(session!==state.session||state.call!==call)return;clearTimeout(state.voiceTimer);state.voiceLive=true;$('remoteAudio').srcObject=stream;updateVoiceUI();
-      try{await $('remoteAudio').play();$('hear').hidden=true;}catch{$('hear').hidden=false;$('voiceStatus').textContent='Click Hear friend to allow audio playback';}
+      if(session!==state.session||state.call!==call)return;clearTimeout(state.voiceTimer);state.voiceLive=true;$('remoteAudio').srcObject=stream;updateSocialWorld();updateVoiceUI();
+      try{await $('remoteAudio').play();if(session===state.session&&state.call===call)$('hear').hidden=true;}catch{if(session===state.session&&state.call===call){$('hear').hidden=false;$('voiceStatus').textContent='Click Hear friend to allow audio playback';}}
     });
-    call.on('close',()=>{if(session===state.session&&state.call===call){state.call=null;state.voiceLive=false;clearTimeout(state.voiceTimer);$('remoteAudio').srcObject=null;updateVoiceUI();if(state.connected){$('voiceStatus').textContent='Voice ended · click mic to retry';}}});
-    call.on('error',err=>{console.warn('Voice:',err);if(session===state.session&&state.call===call){closeCall();updateVoiceUI();$('voiceStatus').textContent='Voice failed · text chat is available';notice('Voice failed. Click the mic button to retry; text chat still works.');}});
+    call.on('close',()=>{if(session===state.session&&state.call===call){closeCall();state.voiceError='Voice ended · retry voice';updateVoiceUI();}});
+    call.on('error',err=>{console.warn('Voice:',err);if(session===state.session&&state.call===call){closeCall();state.voiceError='Voice failed · text chat is available';updateVoiceUI();notice('Voice failed. Use Retry voice to reconnect; text chat still works.');}});
   }
-  function closeCall(){clearTimeout(state.voiceTimer);const call=state.call;state.call=null;state.voiceLive=false;if(call)call.close();$('remoteAudio').srcObject=null;$('hear').hidden=true;}
+  function closeCall(){clearTimeout(state.voiceTimer);clearTimeout(state.voiceRetryTimer);state.voiceRetryTimer=null;const call=state.call;state.call=null;state.voiceLive=false;if(call)call.close();$('remoteAudio').srcObject=null;$('hear').hidden=true;updateVoiceUI();}
+  function queueVoiceRetry(){
+    clearTimeout(state.voiceRetryTimer);const session=state.session;
+    state.voiceRetryTimer=setTimeout(()=>{state.voiceRetryTimer=null;if(session===state.session&&state.connected){maybeCall();updateVoiceUI();}},600);updateVoiceUI();
+  }
+  function retryVoice(){
+    if(!state.connected)return;state.voiceError='';closeCall();send({type:'voice-reset'});queueVoiceRetry();
+  }
   async function toggleMic(){
-    if(!state.stream){await requestMic();if(state.stream&&state.connected){send({type:'voice-reset'});closeCall();setTimeout(maybeCall,600);}return;}
-    if(state.connected&&!state.call){send({type:'voice-reset'});setTimeout(maybeCall,600);return;}
+    if(!state.stream){const session=state.session;await requestMic();if(session===state.session&&state.stream&&state.connected)retryVoice();return;}
     state.muted=!state.muted;state.stream.getAudioTracks().forEach(t=>t.enabled=!state.muted);send(mediaPacket());updateVoiceUI();
   }
 
   // === UI / INPUT ===========================================================
+  for(const destination of DESTINATIONS){const b=document.createElement('button');b.className='secondary';b.dataset.destination=destination.id;b.textContent=destination.name;const detail=document.createElement('small');detail.textContent=destination.detail;b.append(detail);b.onclick=()=>travelTo(destination.id);$('travelChoices').append(b);}
+  for(const emote of INTERACTIONS){const b=document.createElement('button');b.className='secondary';b.dataset.emote=emote.id;b.textContent=emote.label;b.onclick=()=>chooseEmote(emote.id);$('emoteChoices').append(b);}
+  $('travel').onclick=()=>setPanel(socialPanel==='travel'?'':'travel');$('emotes').onclick=()=>setPanel(socialPanel==='emote'?'':'emote');$('interact').onclick=openActivity;
+  document.querySelectorAll('[data-close-panel]').forEach(b=>b.onclick=()=>{const previous=socialPanel;setPanel('');$(previous==='travel'?'travel':'emotes').focus();});
+  $('closeActivity').onclick=closeActivity;
+  function showChat(open){document.querySelector('.chat').dataset.open=String(open);$('hud').dataset.chat=open?'open':'closed';$('chatToggle').setAttribute('aria-expanded',String(open));}
+  $('chatToggle').onclick=()=>showChat(document.querySelector('.chat').dataset.open!=='true');
+  showChat(!matchMedia('(max-width:760px)').matches);
+  matchMedia('(max-width:760px)').addEventListener('change',e=>showChat(!e.matches));
   $('create').onclick=()=>start(true);$('joinForm').onsubmit=e=>{e.preventDefault();start(false);};
   $('leave').onclick=()=>{send({type:'bye'});resetSession();};$('mic').onclick=toggleMic;
+  $('retryVoice').onclick=retryVoice;
   $('hear').onclick=async()=>{try{await $('remoteAudio').play();$('hear').hidden=true;updateVoiceUI();}catch{notice('Audio playback is blocked. Allow sound for this site in your browser.');}};
   $('chatForm').onsubmit=e=>{e.preventDefault();const text=$('chatInput').value.trim().slice(0,400);if(text&&state.connected&&send({type:'chat',text})){line('You',text);$('chatInput').value='';}};
   async function copy(text,label){try{await navigator.clipboard.writeText(text);notice(label);}catch{notice('Copy this: '+text,true);}}
@@ -545,8 +825,9 @@
   $('reconnect').onclick=()=>{if(state.connected){notice('You are already connected to your friend.');return;}if(state.host&&state.peer&&!state.peer.destroyed){if(state.peer.disconnected)state.peer.reconnect();else notice('Your room is open. Ask your friend to join code '+state.code+'.');}else{$('roomInput').value=state.code;start(state.host);} };
   window.addEventListener('keydown',e=>{
     if(!state.playing)return;const editing=/INPUT|TEXTAREA/.test(e.target.tagName);
-    if(e.code==='Escape'){e.target.blur();$('world').focus();$('help').open=false;keys.clear();return;}
-    if(editing)return;if(e.code==='Enter'){if(state.connected){e.preventDefault();$('chatInput').focus();}return;}
+    if(e.code==='Escape'){e.target.blur();if(socialPanel==='activity')closeActivity();else setPanel('');$('world').focus();$('help').open=false;keys.clear();return;}
+    if(editing)return;if(e.code==='Enter'){if(e.target.tagName==='BUTTON')return;if(state.connected){e.preventDefault();showChat(true);$('chatInput').focus();}return;}
+    if(e.code==='KeyE'&&!e.repeat){e.preventDefault();openActivity();return;}
     if(e.code==='KeyM'&&!e.repeat){e.preventDefault();toggleMic();return;}
     if(['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','ShiftLeft','ShiftRight'].includes(e.code)){e.preventDefault();keys.add(e.code);}
   });window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>keys.clear());
@@ -563,7 +844,7 @@
   const invite=new URLSearchParams(location.hash.slice(1)).get('room');if(invite)$('roomInput').value=invite.toUpperCase().slice(0,6);
   try {buildWorld();busy(false);$('landingMessage').textContent='Free to wander. Bring one friend.';requestAnimationFrame(frame);}catch(err){console.error(err);$('fatal').hidden=false;$('fatal').textContent='Could not start 3D graphics. Enable hardware acceleration or try another browser. '+err.message;}
   // Read-only diagnostics make real connections and render performance inspectable.
-  window.somewhereDiagnostics=()=>({room:state.code,host:state.host,connected:state.connected,connection:{stage:state.connectStage,rtc:state.rtcState,ice:state.iceState,lastPeerError:state.lastPeerError},local:{x:localPosition.x,z:localPosition.z},remote:{x:remoteAvatar.position.x,z:remoteAvatar.position.z,visible:remoteAvatar.visible},voice:{microphone:!!state.stream,muted:state.muted,call:!!state.call,receiving:state.voiceLive,playback:!$('remoteAudio').paused},peer:state.peer?.id,zone:ZONES[zoneAt(localPosition.x,localPosition.z)].name,drawCalls:renderer?.info.render.calls,triangles:renderer?.info.render.triangles});
+  window.somewhereDiagnostics=()=>({version:'0.2.0',room:state.code,host:state.host,connected:state.connected,connection:{stage:state.connectStage,rtc:state.rtcState,ice:state.iceState,lastPeerError:state.lastPeerError},local:{x:localPosition.x,z:localPosition.z,emote:localAvatar.userData.emote?.id||null},remote:{x:remoteAvatar.position.x,z:remoteAvatar.position.z,visible:remoteAvatar.visible,emote:remoteAvatar.userData.emote?.id||null},voice:{microphone:!!state.stream,muted:state.muted,call:!!state.call,receiving:state.voiceLive,playback:!$('remoteAudio').paused,gain:$('remoteAudio').volume,outOfEarshot:$('remoteAudio').muted},activity:activityView?JSON.parse(JSON.stringify(activityView)):null,peer:state.peer?.id,zone:ZONES[zoneAt(localPosition.x,localPosition.z)].name,drawCalls:renderer?.info.render.calls,triangles:renderer?.info.render.triangles});
 })();
 </script>
 </body>

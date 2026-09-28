@@ -1,0 +1,31 @@
+BROWSER ERROR: Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED
+BROWSER ERROR: Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED
+TEST FAILED page.waitForFunction: Timeout 30000ms exceeded.
+    at page (C:\Users\jafer\OneDrive\Documents\ChatGPT\game 2\test-browser.cjs:10:853)
+    at async C:\Users\jafer\OneDrive\Documents\ChatGPT\game 2\test-browser.cjs:16:10 {
+  log: [],
+  name: 'TimeoutError'
+}
+PAGE 0 ≈
+somewhere
+A LITTLE WORLD FOR TWO
+A SHARED ESCAPE · KERALA, INDIA
+Take the
+scenic route.
+
+Backwaters, slow afternoons, and a friend.
+Come wander somewhere together.
+
+NO HURRY. NO DESTINATION.
+Just a little further.
+What should your friend call you?
+Create Room
+↗
+or meet a friend
+Room code
+Join
+
+A library could not load. Check your internet connection and allow cdn.jsdelivr.net, then reload.
+
+Space to wander.
+2 people · 3 places · absolutely no rush

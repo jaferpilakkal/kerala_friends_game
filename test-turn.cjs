@@ -1,11 +1,11 @@
 // Checks TURN allocation without allowing a direct connection to hide a broken relay.
 // Uses exactly the ICE servers configured in index.html. No addresses are logged.
-const { chromium } = require('C:/Users/jafer/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const { chromium, launchOptions } = require('./test-support.cjs');
 const fs = require('node:fs');
-const source = fs.readFileSync('index.html', 'utf8');
+const source = fs.readFileSync(require('node:path').join(__dirname, 'index.html'), 'utf8');
 const options = Function(`return (${source.match(/const PEER_OPTIONS = (\{[\s\S]*?\n  \});/)[1]})`)();
 (async () => {
-  const browser = await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});
+  const browser = await chromium.launch(launchOptions);
   try {
     const page = await browser.newPage();
     const results = await page.evaluate(async servers => Promise.all(servers.map(server => new Promise(async resolve => {

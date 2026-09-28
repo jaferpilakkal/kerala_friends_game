@@ -1,0 +1,4 @@
+# The complete browser application is index.html.
+# Keep tests, dependencies, screenshots and documentation out of static assets.
+*
+!index.html

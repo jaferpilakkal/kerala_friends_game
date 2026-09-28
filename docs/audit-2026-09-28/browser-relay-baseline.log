@@ -1,0 +1,17 @@
+ROOM DN5BXV
+CONNECTED [{"room":"DN5BXV","host":true,"connected":true,"connection":{"stage":"app-handshake-complete","rtc":"connected","ice":"connected","lastPeerError":""},"local":{"x":-1.5,"z":19},"remote":{"x":1.5,"z":19,"visible":true},"voice":{"microphone":true,"muted":false,"call":true,"receiving":false,"playback":false},"peer":"somewhere-kerala-v1-DN5BXV","zone":"The backwaters","drawCalls":88,"triangles":18164},{"room":"DN5BXV","host":false,"connected":true,"connection":{"stage":"app-handshake-complete","rtc":"connected","ice":"connected","lastPeerError":""},"local":{"x":1.5,"z":19},"remote":{"x":-1.5,"z":19,"visible":true},"voice":{"microphone":true,"muted":false,"call":true,"receiving":false,"playback":false},"peer":"a179757c-9cbb-43c4-ad55-b28cec82134e","zone":"The backwaters","drawCalls":409,"triangles":21996}]
+PASS selected TURN relay on both peers
+PASS A movement sync
+PASS B movement sync
+PASS bidirectional chat
+AUDIO [{"bytes":45308,"packets":745,"states":["closed","connected","connected"]},{"bytes":45093,"packets":761,"states":["closed","connected","connected"]}]
+PASS real bidirectional audio RTP
+PASS mute/unmute
+PASS room full
+PASS graceful disconnect
+PASS mic-denied fallback and replacement guest
+PASS listen-only guest
+BROWSER ERROR: ERROR PeerJS:  Error: Could not connect to peer somewhere-kerala-v1-ZZZZZZ
+PASS missing room
+DIAGNOSTICS {"room":"DN5BXV","host":true,"connected":false,"connection":{"stage":"app-handshake-complete","rtc":"connected","ice":"connected","lastPeerError":""},"local":{"x":-2.322594695195264,"z":16.746491830514753},"remote":{"x":1.5,"z":19,"visible":false},"voice":{"microphone":true,"muted":false,"call":false,"receiving":false,"playback":false},"peer":"somewhere-kerala-v1-DN5BXV","zone":"The backwaters","drawCalls":48,"triangles":17271}
+ALL TESTS PASSED

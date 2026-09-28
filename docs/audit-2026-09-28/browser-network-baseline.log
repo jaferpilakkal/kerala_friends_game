@@ -1,0 +1,16 @@
+ROOM 2ED82Q
+CONNECTED [{"room":"2ED82Q","host":true,"connected":true,"connection":{"stage":"app-handshake-complete","rtc":"connected","ice":"connected","lastPeerError":""},"local":{"x":-1.5,"z":19},"remote":{"x":1.5,"z":19,"visible":true},"voice":{"microphone":true,"muted":false,"call":true,"receiving":false,"playback":false},"peer":"somewhere-kerala-v1-2ED82Q","zone":"The backwaters","drawCalls":88,"triangles":18164},{"room":"2ED82Q","host":false,"connected":true,"connection":{"stage":"app-handshake-complete","rtc":"connected","ice":"connected","lastPeerError":""},"local":{"x":1.5,"z":19},"remote":{"x":-1.5,"z":19,"visible":true},"voice":{"microphone":true,"muted":false,"call":false,"receiving":false,"playback":false},"peer":"84f26787-3c52-447d-b371-3d0ee4cc0fab","zone":"The backwaters","drawCalls":409,"triangles":21996}]
+PASS A movement sync
+PASS B movement sync
+PASS bidirectional chat
+AUDIO [{"bytes":36906,"packets":618,"states":["closed","connected","connected"]},{"bytes":37582,"packets":631,"states":["closed","connected","connected"]}]
+PASS real bidirectional audio RTP
+PASS mute/unmute
+PASS room full
+PASS graceful disconnect
+PASS mic-denied fallback and replacement guest
+PASS listen-only guest
+BROWSER ERROR: ERROR PeerJS:  Error: Could not connect to peer somewhere-kerala-v1-ZZZZZZ
+PASS missing room
+DIAGNOSTICS {"room":"2ED82Q","host":true,"connected":false,"connection":{"stage":"app-handshake-complete","rtc":"connected","ice":"connected","lastPeerError":""},"local":{"x":-1.9376061818746442,"z":17.80117254386418},"remote":{"x":1.5,"z":19,"visible":false},"voice":{"microphone":true,"muted":false,"call":false,"receiving":false,"playback":false},"peer":"somewhere-kerala-v1-2ED82Q","zone":"The backwaters","drawCalls":46,"triangles":17391}
+ALL TESTS PASSED

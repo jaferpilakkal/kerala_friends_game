@@ -1,0 +1,40 @@
+[
+  {
+    "url": "turn:global.relay.metered.ca:80",
+    "relayCandidates": 1,
+    "errors": [
+      {
+        "code": 701,
+        "message": "STUN host lookup received error."
+      },
+      {
+        "code": 701,
+        "message": "TURN host lookup received error."
+      }
+    ]
+  },
+  {
+    "url": "turn:global.relay.metered.ca:80?transport=tcp",
+    "relayCandidates": 2,
+    "errors": []
+  },
+  {
+    "url": "turn:global.relay.metered.ca:443",
+    "relayCandidates": 1,
+    "errors": [
+      {
+        "code": 701,
+        "message": "STUN host lookup received error."
+      },
+      {
+        "code": 701,
+        "message": "TURN host lookup received error."
+      }
+    ]
+  },
+  {
+    "url": "turns:global.relay.metered.ca:443?transport=tcp",
+    "relayCandidates": 2,
+    "errors": []
+  }
+]

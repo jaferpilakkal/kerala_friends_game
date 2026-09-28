@@ -35,6 +35,14 @@ A complete two-player, single-file exploration prototype. **`index.html` is the 
 
 ## Controls
 
+### Playable update — v0.2
+
+Create a room and invite one friend. Use **Travel → Backwater tea shop**, then **Tea table** (or **E**). Both players take a seat; the room creator starts the five-question game. Answers, scores, the timer, results and replay are shared. Leaving the table or disconnecting frees both seats.
+
+**Emotes** includes wave, sit, dance, laugh, point and greet. **Travel** moves you between the existing backwaters, tea hills and old coast. Voice is clear nearby, fades between 8 and 28 world units, and is silenced beyond that. The two-player call stays connected, so distance is an audibility feature, not a privacy boundary. Mobile Safari may apply its own playback-volume rules; physical iOS listening remains unverified.
+
+On phones, tap **Conversation** to expand chat. The activity stays inside the world, and its panel can scroll on short screens. This release still has two-player private rooms and three existing areas. Fourteen districts, streaming and public 10–20-player instances remain future work.
+
 | Control | Action |
 | --- | --- |
 | WASD / arrow keys | Move relative to camera |
@@ -44,6 +52,9 @@ A complete two-player, single-file exploration prototype. **`index.html` is the 
 | Enter | Focus text chat |
 | Escape | Return to walking |
 | M | Mute / unmute |
+| E / Tea table | Open nearby tea-shop trivia |
+| Travel / Emotes | Visit a destination / interact with your friend |
+| Conversation | Expand or collapse text chat |
 | Touch arrows | Move on touch devices |
 
 Follow the pale path northwest to the Munnar-inspired tea hills or northeast to the Kochi-inspired town and Chinese fishing nets. The backwater jetty is south. Terrain is walkable, houses and palm trunks have collision, and the shoreline keeps you on land.
@@ -74,9 +85,23 @@ The inline code is divided into configuration, world generation, room/data conne
 
 ## Verification
 
-`test-browser.cjs` is a development check, **not an application dependency**. Its Playwright path points to the bundled runtime on the development computer; replace that require path with your installed `playwright` package if rerunning elsewhere.
+The test tooling is development-only; `index.html` remains the whole deployed application. With a static server running on port 8000:
+
+```powershell
+npm ci
+npx playwright install chromium
+npm test
+npm run test:exploration
+npm run test:turn
+```
+
+`npm test` runs the activity rules, ordinary two-player regression, failure/lifecycle suite and shared social game. Browser tests share `test-support.cjs`. `TEST_URL` changes the app URL; `BROWSER_EXECUTABLE` selects an installed Chromium/Chrome executable; `PLAYWRIGHT_MODULE` optionally selects an existing Playwright installation. Otherwise the locally installed package and its Chromium are used. `TEST_OUTPUT_DIR` selects an artifact folder; by default each script creates a timestamped folder under ignored `test-results/`. Tests do not overwrite the root screenshots.
 
 The browser test uses the real CDN builds and public PeerJS broker. It verifies creation/join, movement both ways, text both ways, received audio RTP packets in both directions, mute/unmute, a third-player rejection, disconnect/rejoin, microphone-denied chat fallback, listen-only audio, and an unknown room code. Automated audio input is synthetic; human audibility and echo behavior should also be checked using the checklist above.
+
+`test-lifecycle.cjs` additionally checks mute after media failure, explicit Retry voice while muted, chat during signaling loss, reconnect after peer destruction, canceling delayed retries on leave, and stopping microphone tracks when permission resolves after leave. It injects failures into PeerJS/media at the test boundary without adding writable test controls to the application.
+
+**Mute mic** always controls your audio track. **Retry voice** appears when a connected session has no active media call; it reconnects voice while preserving mute. The two actions are independent.
 
 To test TURN allocation independently, run `node test-turn.cjs`. It reads the application's configured TURN servers, counts relay candidates, and prints errors without logging addresses or credentials. Zero candidates is a failure.
 
@@ -91,3 +116,7 @@ node test-browser.cjs
 This forces TURN for data and voice, and verifies that both peers selected relay candidates. Remove the `RELAY_ONLY` environment variable to restore the ordinary test. A successful forced-relay test is still followed by a real mobile-data test.
 
 These checks passed in Chrome on the development machine. `test-exploration.cjs` also walked from the jetty to the tea hills and coastal town using keyboard input, verified zone changes, and checked that the mobile session controls and help menu do not overlap. Screenshots alongside the file show the tested views.
+
+## Architecture and migration
+
+Start with [Current architecture and gaps](CURRENT_ARCHITECTURE.md), [target architecture](docs/TARGET_ARCHITECTURE.md), [14-district roadmap](docs/DISTRICT_ROADMAP.md), and [migration phases](docs/MIGRATION_PLAN.md). [Stage 1 status](STAGE1_STATUS.md) records the reliability work and remaining gates. [Deployment status](docs/DEPLOYMENT.md) distinguishes the current static app from proposed Cloudflare services. No public-room backend or streaming system has been deployed by this work.
