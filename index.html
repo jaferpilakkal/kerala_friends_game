@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<!--
+  SOMEWHERE IN KERALA — the complete application is this one file.
+  Quick test: in this folder run `npx --yes serve . -l 8000`, then open
+  http://localhost:8000 in two tabs. Create Room in A, paste its code and Join
+  in B. Allow microphones; use headphones. WASD/arrows move, drag looks around.
+  Internet is required for the two CDN scripts and the public PeerJS broker.
+  Other devices can run their own localhost copy, or use the same HTTPS host.
+  Public STUN/signaling cannot guarantee passage through every restrictive NAT.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#294b40">
+<link rel="icon" href="data:,">
+<title>Somewhere in Kerala · Explore together</title>
+<style>
+  :root { color-scheme:light; --ink:#24493d; --paper:#f8f6ed; --muted:#58695e; --line:#d9ded0; --accent:#315943; }
+  * { box-sizing:border-box }
+  body { margin:0; overflow:hidden; background:#b5d6cf; font:14px/1.5 'Segoe UI',Arial,sans-serif; color:var(--ink) }
+  button,input { font:inherit } button { cursor:pointer; white-space:nowrap; transition:background .18s,transform .18s }
+  button:active { transform:translateY(1px) } button:disabled { opacity:.55; cursor:wait }
+  button:focus-visible,input:focus-visible,summary:focus-visible { outline:3px solid #c77a38; outline-offset:3px }
+  [hidden] { display:none!important }
+  #world { position:fixed; inset:0; width:100%; height:100%; outline:none; touch-action:none }
+  .brand { display:flex; align-items:center; gap:12px; font-size:19px; letter-spacing:-.7px; font-weight:650 }
+  .brand-mark { width:31px; height:31px; border:1.5px solid currentColor; border-radius:50%; display:grid; place-items:center; font:24px Georgia,serif }
+  .topbar { position:absolute; top:30px; left:38px; right:38px; display:flex; justify-content:space-between; align-items:center; gap:20px }
+  .quiet { color:var(--muted) } .tiny { font-size:11px; letter-spacing:1.7px; text-transform:uppercase; font-weight:650 }
+  .landing-copy { position:absolute; left:5.2%; top:16%; pointer-events:none }
+  h1 { font:400 clamp(42px,5.1vw,77px)/1.04 Georgia,'Times New Roman',serif; letter-spacing:-3px; margin:14px 0 19px }
+  h1 em { font-weight:400 } .landing-copy p { max-width:330px; font-size:16px; line-height:1.6 }
+  .room-panel { position:absolute; left:5.2%; bottom:8%; width:330px; background:var(--paper); padding:23px 25px; border:1px solid #fff9; border-radius:14px; box-shadow:0 12px 40px #21463518 }
+  label { display:block; margin-bottom:6px; font-size:12px; font-weight:600 }
+  input { border:1px solid #c3cdbd; border-radius:7px; padding:11px 12px; background:#fffdf7; color:var(--ink); width:100%; min-width:0 }
+  input::placeholder { color:#687363 } input:focus { border-color:var(--accent) }
+  .primary { background:var(--accent); border:1px solid var(--accent); color:#fffdf4; padding:12px 18px; border-radius:7px; font-weight:600 }
+  .primary:hover { background:#203f2e } .secondary { border:1px solid #c3cdbd; color:var(--ink); background:var(--paper); border-radius:7px; padding:10px 14px }
+  .secondary:hover { background:#e9eddf } #create { width:100%; margin-top:12px; display:flex; justify-content:space-between }
+  .divider { display:flex; align-items:center; gap:12px; margin:16px 0; font-size:11px; color:var(--muted) }
+  .divider:before,.divider:after { content:''; height:1px; flex:1; background:var(--line) }
+  .join-row { display:flex; gap:8px } #roomInput { text-transform:uppercase; letter-spacing:2px }
+  #landingMessage { font-size:12px; margin:12px 0 0; min-height:18px } .error { color:#933e2b!important }
+  .landing-note { position:absolute; bottom:30px; right:38px; text-align:right; font-size:12px; color:#355749 }
+  .landing-note strong { display:block; font-family:Georgia,serif; font-size:22px; font-weight:400; margin-bottom:4px }
+  .world-caption { position:absolute; top:32%; right:7%; color:#2e5644; pointer-events:none; text-align:center }
+  .world-caption span { display:block; margin-top:6px; font:italic 23px Georgia,serif }
+  #landing { position:fixed; inset:0; background:linear-gradient(90deg,#e8eedbbd 0%,#e8eedb88 27%,transparent 52%); overflow:auto }
+  #hud { position:fixed; inset:0; pointer-events:none } #hud button,#hud input,#hud details,#hud .chat { pointer-events:auto }
+  .hud-top { position:absolute; top:24px; left:28px; right:28px; display:flex; justify-content:space-between; align-items:flex-start; gap:16px }
+  .hud-brand { background:var(--paper); padding:12px 17px; border-radius:10px; box-shadow:0 3px 16px #20433512 }
+  .session { display:flex; align-items:center; gap:10px; padding:9px 11px; background:var(--paper); border-radius:10px; box-shadow:0 3px 16px #20433512 }
+  .status { display:flex; align-items:center; gap:7px; font-size:12px; padding:0 8px }
+  .status:before { content:''; width:7px; height:7px; border-radius:50%; background:#bd893a; flex-shrink:0 }
+  .status[data-state=connected]:before { background:#387451 } .status[data-state=disconnected]:before { background:#ab5340 }
+  #copyCode { letter-spacing:2px; font-weight:700; font-size:13px; padding:7px 11px }
+  .small-button { padding:7px 10px; font-size:12px }
+  .zone { position:absolute; top:112px; left:30px } .zone h2 { font:34px/1.15 Georgia,serif; letter-spacing:-1px; margin:6px 0 5px }
+  .zone p { margin:0; font-size:12px; color:#365246 }
+  #notice { position:absolute; top:92px; left:50%; transform:translateX(-50%); max-width:430px; width:max-content; background:var(--paper); padding:11px 16px; border-radius:8px; font-size:12px; text-align:center; box-shadow:0 4px 20px #163b2522 }
+  .chat { position:absolute; bottom:25px; left:28px; width:300px; background:#f8f6edef; border:1px solid #ffffff88; border-radius:12px; overflow:hidden }
+  .chat-head { display:flex; justify-content:space-between; align-items:center; padding:13px 15px 8px; font-size:12px; font-weight:650 }
+  #messages { height:119px; overflow-y:auto; padding:0 15px 9px; font-size:12px; scrollbar-width:thin; overflow-wrap:anywhere }
+  .message { margin:7px 0 } .message strong { margin-right:7px } .message.system { color:#5c6b5b; font-size:11px }
+  #chatForm { display:flex; gap:7px; margin:0 10px 10px } #chatInput { padding:8px 10px; font-size:12px }
+  #chatForm button { font-size:12px; padding:7px 12px }
+  .voice-bar { display:flex; align-items:center; gap:10px; padding:10px; border-top:1px solid var(--line) }
+  #voiceStatus { font-size:11px; line-height:1.35; flex:1 } #mic { min-width:82px }
+  .map-box { position:absolute; bottom:25px; right:28px; width:184px; background:#f8f6edef; border-radius:12px; padding:12px }
+  #map { display:block; width:160px; height:116px; border-radius:5px } .map-caption { display:flex; justify-content:space-between; margin-top:7px; font-size:10px; color:#455c4b }
+  .controls { position:absolute; bottom:30px; left:50%; transform:translateX(-50%); font-size:11px; color:#244438; text-align:center; background:#f8f6eded; padding:10px 16px; border-radius:8px }
+  kbd { font:10px 'Segoe UI',sans-serif; display:inline-block; padding:2px 5px; border:1px solid #becbb8; border-bottom-width:2px; border-radius:3px; margin-right:2px }
+  .controls span { display:block; margin-top:4px; color:#52644f }
+  #help { position:absolute; right:28px; top:85px; max-width:310px; background:var(--paper); border-radius:9px; padding:10px 14px; font-size:12px }
+  #help summary { cursor:pointer } #help p { margin:9px 0 } #help a { color:var(--ink) }
+  #touchPad { position:absolute; right:20px; bottom:205px; display:none; grid-template-columns:44px 44px 44px; gap:4px; pointer-events:auto }
+  #touchPad button { height:44px; border:1px solid #b8c8ae; background:#f8f6ede8; color:var(--ink); border-radius:8px; touch-action:none }
+  #touchPad button:first-child { grid-column:2 } #touchPad button:nth-child(2) { grid-column:1 }
+  #fatal { position:fixed; inset:20%; padding:30px; background:var(--paper); border-radius:12px; z-index:5 }
+  @media(max-height:760px) and (min-width:761px) { .landing-copy { top:14% } h1 { font-size:53px; margin:10px 0 } .landing-copy p { font-size:14px } .room-panel { bottom:5%; padding:16px 22px } }
+  @media(max-width:760px) { .topbar { left:22px; right:22px; top:20px } .topbar>.tiny { display:none } .landing-copy { top:12%; left:24px } h1 { font-size:49px; letter-spacing:-2px } .landing-copy p { font-size:14px; max-width:260px } .room-panel { left:24px; bottom:28px; width:min(330px,calc(100% - 48px)) } .landing-note,.world-caption { display:none } #landing { background:linear-gradient(90deg,#e8eedbbb,transparent) } .hud-top { top:12px; left:12px; right:12px; flex-wrap:wrap; gap:8px } .hud-brand { padding:7px 11px } .hud-brand .brand { font-size:16px } .hud-brand .brand-mark { display:none } .session { padding:5px; gap:4px; margin-left:auto } .status { font-size:10px; padding:0 4px } #copyCode { padding:5px 8px; font-size:11px } #leave { padding:6px } .zone { top:112px; left:17px } .zone h2 { font-size:28px } .chat { bottom:12px; left:12px; width:255px } #messages { height:90px } .map-box { right:12px; bottom:12px; width:125px; padding:7px } #map { width:111px; height:83px } .map-caption { font-size:8px } .controls { display:none } #help { top:67px; right:12px; max-width:280px } #notice { top:178px; width:calc(100% - 32px) } }
+  @media(pointer:coarse) { #touchPad { display:grid } }
+  @media(max-width:400px) { .map-box { display:none } .chat { width:calc(100% - 24px) } }
+  @media(max-width:760px) { .hud-top { display:block } .hud-brand { width:max-content } .session { margin:9px 0 0; width:100%; justify-content:space-between } #help { top:12px; right:12px; z-index:2 } #help[open] { box-shadow:0 8px 24px #24443822 } .zone { top:116px } #notice { top:205px } }
+  @media(prefers-reduced-motion:reduce) { button { transition:none } }
+</style>
+</head>
+<body>
+<canvas id="world" aria-label="Shared 3D Kerala world. Use WASD or arrow keys to move." tabindex="0"></canvas>
+<section id="landing" aria-label="Create or join a room">
+  <header class="topbar"><div class="brand"><span class="brand-mark" aria-hidden="true">≈</span> somewhere</div><span class="tiny">A little world for two</span></header>
+  <div class="landing-copy"><div class="tiny">A shared escape · Kerala, India</div><h1>Take the<br><em>scenic route.</em></h1><p>Backwaters, slow afternoons, and a friend.<br>Come wander somewhere together.</p></div>
+  <div class="world-caption"><div class="tiny">No hurry. No destination.</div><span>Just a little further.</span></div>
+  <div class="room-panel">
+    <label for="nameInput">What should your friend call you?</label><input id="nameInput" maxlength="20" placeholder="Your name" autocomplete="nickname" value="Traveller">
+    <button id="create" class="primary" disabled><span>Create Room</span><span aria-hidden="true">↗</span></button>
+    <div class="divider">or meet a friend</div>
+    <form id="joinForm"><label for="roomInput">Room code</label><div class="join-row"><input id="roomInput" maxlength="6" placeholder="6 letters" autocomplete="off" spellcheck="false" required pattern="[A-Za-z2-9]{6}"><button id="join" class="secondary" disabled>Join</button></div></form>
+    <p id="landingMessage" role="status">Preparing your little world…</p>
+  </div>
+  <div class="landing-note"><strong>Space to wander.</strong>2 people · 3 places · absolutely no rush</div>
+</section>
+<main id="hud" hidden>
+  <div class="hud-top"><div class="hud-brand"><div class="brand"><span class="brand-mark" aria-hidden="true">≈</span> somewhere</div></div><div class="session"><span id="connectionStatus" class="status" data-state="connecting" role="status">Connecting</span><button id="copyCode" class="secondary" title="Copy room code">······</button><button id="copyLink" class="secondary small-button">Invite link</button><button id="leave" class="secondary small-button">Leave</button></div></div>
+  <section class="zone" aria-live="polite"><div id="zoneKicker" class="tiny">01 / by the water</div><h2 id="zoneName">The backwaters</h2><p id="zoneDescription">Find a little shade. Stay a little longer.</p></section>
+  <div id="notice" role="status" hidden></div>
+  <details id="help"><summary>How to wander</summary><p><b>WASD / arrows</b> to walk, <b>Shift</b> to move faster. Drag the world to look around; scroll to zoom. Press <b>Enter</b> to chat, <b>Escape</b> to return to walking, <b>M</b> to mute.</p><p>Tea hills are northwest. The coastal town is northeast. Follow the pale paths; the wooden jetty is south.</p><p>Share your room code with one friend. Allow your microphone for voice. Use headphones when testing two tabs.</p><p>If voice is blocked, text chat still works. Remote devices need an HTTPS page for microphone access. Restrictive networks may prevent a direct peer connection.</p><button id="reconnect" class="secondary small-button">Reconnect</button></details>
+  <section class="chat" aria-label="Conversation"><div class="chat-head"><span>A little conversation</span><span id="playerCount" class="quiet">1 / 2 here</span></div><div id="messages" role="log" aria-live="polite"></div><form id="chatForm"><label for="chatInput" hidden>Message your friend</label><input id="chatInput" maxlength="400" placeholder="Say something…" autocomplete="off" disabled><button id="sendChat" class="primary" disabled>Send</button></form><div class="voice-bar"><button id="mic" class="secondary small-button" aria-pressed="false">Enable mic</button><span id="voiceStatus" role="status">Voice is getting ready</span><button id="hear" class="secondary small-button" hidden>Hear friend</button></div></section>
+  <div class="controls"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> wander &nbsp; <kbd>⇧</kbd> faster<span>Drag to look · Scroll to zoom · Enter to chat</span></div>
+  <aside class="map-box" aria-label="World map"><canvas id="map" width="320" height="232"></canvas><div class="map-caption"><span>● you &nbsp; ○ friend</span><span>N ↑</span></div></aside>
+  <div id="touchPad" aria-label="Touch movement"><button data-key="ArrowUp" aria-label="Forward">↑</button><button data-key="ArrowLeft" aria-label="Left">←</button><button data-key="ArrowDown" aria-label="Back">↓</button><button data-key="ArrowRight" aria-label="Right">→</button></div>
+</main>
+<audio id="remoteAudio" autoplay playsinline></audio>
+<div id="fatal" hidden role="alert"></div>
+<noscript>This world needs JavaScript enabled.</noscript>
+<!-- Pinned CDN builds. All game code and assets are inside this HTML. No build step. -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js"></script>
+<script>
+'use strict';
+(() => {
+  const $ = id => document.getElementById(id);
+  if (!window.THREE || !window.Peer) {
+    $('landingMessage').textContent = 'A library could not load. Check your internet connection and allow cdn.jsdelivr.net, then reload.';
+    $('landingMessage').className = 'error'; return;
+  }
+
+  // === CONFIGURATION =========================================================
+  // Extend ZONES, terrainHeight(), and buildWorld() to add new destinations.
+  // Room IDs are namespaced to avoid collisions with unrelated PeerJS apps.
+  const PROTOCOL = 'somewhere-kerala-v1';
+  const PREFIX = 'somewhere-kerala-v1-';
+  const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const PEER_OPTIONS = {
+    host:'0.peerjs.com', port:443, path:'/', secure:true, key:'peerjs', debug:1,
+    config:{ iceServers:[
+      {urls:'stun:stun.l.google.com:19302'},
+      {urls:'stun:stun.cloudflare.com:3478'},
+      {urls:'stun:openrelay.metered.ca:80'},
+      {urls:'turn:openrelay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},
+      {urls:'turn:openrelay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'},
+      {urls:'turn:openrelay.metered.ca:443?transport=tcp',username:'openrelayproject',credential:'openrelayproject'}
+    ] }
+  };
+  // The public broker provides signaling. STUN tries direct paths; TURN relays
+  // traffic when NATs or firewalls block a direct peer-to-peer route.
+  const ZONES = [
+    {name:'The backwaters',kicker:'01 / by the water',description:'Find a little shade. Stay a little longer.'},
+    {name:'The tea hills',kicker:'02 / a little higher',description:'Green folds of Munnar, stretching into the mist.'},
+    {name:'The old coast',kicker:'03 / out to sea',description:'Past quiet verandas, the fishing nets wait.'}
+  ];
+  const state = { playing:false,host:false,code:'',name:'Traveller',peer:null,conn:null,
+    connected:false,remoteName:'Friend',lastSeen:0,session:0,muted:false,
+    stream:null,micPending:null,micSettled:false,remoteMic:null,call:null,
+    voiceTimer:null,joinTimer:null,brokerTimer:null,retryTimer:null,voiceLive:false,voiceError:'',sequence:0,receivedSequence:-1,
+    connectStage:'idle',rtcState:'new',iceState:'new',lastPeerError:'' };
+  const keys = new Set(), obstacles = [], boats = [], palms = [];
+  let zoneIndex = -1, scene,renderer,camera,localAvatar,remoteAvatar,water,fireflies;
+  let yaw=.35,pitch=.63,distance=16,drag=null,lastFrame=performance.now(),elapsed=0,lastMap=0;
+  let walkPhase=0,remoteMoving=false,noticeTimer,remoteTarget=new THREE.Vector3(2,0,19),remoteRotation=0;
+  const localPosition = new THREE.Vector3(-1.5,0,19), cameraTarget = new THREE.Vector3();
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const materials = new Map(), geometries = new Map();
+
+  function material(color) {
+    if (!materials.has(color)) materials.set(color,new THREE.MeshStandardMaterial({color,roughness:1,flatShading:true}));
+    return materials.get(color);
+  }
+  function geometry(type,args) {
+    const key=type+args.join(',');
+    if(!geometries.has(key)) geometries.set(key,new THREE[type](...args));
+    return geometries.get(key);
+  }
+  function mesh(type,args,color,x=0,y=0,z=0,parent=scene) {
+    const m=new THREE.Mesh(geometry(type,args),material(color)); m.position.set(x,y,z); m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;
+  }
+  function box(w,h,d,color,x,y,z,parent=scene) {return mesh('BoxGeometry',[w,h,d],color,x,y,z,parent);}
+  function rod(a,b,r,color,parent=scene) {
+    const from=new THREE.Vector3(...a),to=new THREE.Vector3(...b),v=to.clone().sub(from);
+    const m=mesh('CylinderGeometry',[r,r,v.length(),5],color,0,0,0,parent);m.position.copy(from.add(to).multiplyScalar(.5));m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),v.normalize());return m;
+  }
+  // Seeded randomness keeps scenery identical in every browser.
+  let seed=47281;
+  function random() {seed=(Math.imul(1664525,seed)+1013904223)>>>0;return seed/4294967296;}
+  function coastRadius(a) {return 1+.045*Math.sin(a*5)+.027*Math.cos(a*9);}
+  function onIsland(x,z,margin=0) {const a=Math.atan2(z/43,x/64);return Math.hypot(x/64,z/43)<coastRadius(a)-margin;}
+  function terrainHeight(x,z) {
+    // Smooth analytical hills: geometry, feet, props, and remote avatars agree.
+    return .8+8.5*Math.exp(-((x+32)**2/460+(z+19)**2/210))+4.4*Math.exp(-((x+48)**2/145+(z+6)**2/210));
+  }
+  function ground(x,z) { return terrainHeight(x,z); }
+  function islandMesh(sand=false) {
+    const rings=26,segments=112,positions=[],colors=[],indices=[];
+    const green=new THREE.Color('#a1b985'),dark=new THREE.Color('#7f9f71'),beach=new THREE.Color('#ded4a8');
+    for(let r=0;r<=rings;r++) for(let j=0;j<=segments;j++) {
+      const a=j/segments*Math.PI*2,rad=(r/rings)*coastRadius(a)*(sand?1.035:1),x=Math.cos(a)*64*rad,z=Math.sin(a)*43*rad;
+      positions.push(x,sand?.29:ground(x,z),z);
+      const c=sand?beach:green.clone().lerp(dark,Math.max(0,Math.min(1,(ground(x,z)-1)/12))*.8+random()*.08); colors.push(c.r,c.g,c.b);
+      if(r<rings&&j<segments){const i=r*(segments+1)+j;indices.push(i,i+1,i+segments+1,i+1,i+segments+2,i+segments+1);}
+    }
+    const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geo.setIndex(indices);geo.computeVertexNormals();
+    const m=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,flatShading:true,side:THREE.DoubleSide}));m.receiveShadow=true;scene.add(m);
+  }
+  function path(points,width=2.4,color='#dcd4ae') {
+    const curve=new THREE.CatmullRomCurve3(points.map(([x,z])=>new THREE.Vector3(x,0,z))),p=curve.getPoints(90),v=[],idx=[];
+    p.forEach((q,i)=>{const tangent=p[Math.min(i+1,p.length-1)].clone().sub(p[Math.max(0,i-1)]).normalize();for(const sign of [-1,1]){const x=q.x+tangent.z*width*.5*sign,z=q.z-tangent.x*width*.5*sign;v.push(x,ground(x,z)+.045,z);}if(i<p.length-1){const k=i*2;idx.push(k,k+2,k+1,k+1,k+2,k+3);}});
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(v,3));g.setIndex(idx);g.computeVertexNormals();const m=new THREE.Mesh(g,material(color));m.receiveShadow=true;scene.add(m);
+  }
+  function palm(x,z,scale=1) {
+    const g=new THREE.Group();g.position.set(x,ground(x,z),z);g.scale.setScalar(scale);scene.add(g);
+    const lean=(random()-.5)*.8;rod([0,0,0],[lean*.5,2.7,0],.18,'#97836a',g);rod([lean*.5,2.7,0],[lean,5.2,.15],.13,'#9e8868',g);
+    const crown=new THREE.Group();crown.position.set(lean,5.2,.15);g.add(crown);
+    for(let i=0;i<7;i++) {
+      const a=i*Math.PI*2/7+random()*.3;
+      const leafGeo=new THREE.BufferGeometry();const verts=[0,0,0,Math.cos(a)*1.35, .45,Math.sin(a)*1.35,Math.cos(a)*3,-.75,Math.sin(a)*3,Math.cos(a+.27)*1.65,.05,Math.sin(a+.27)*1.65];
+      leafGeo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));leafGeo.setIndex([0,1,3,1,2,3]);leafGeo.computeVertexNormals();
+      const leaf=new THREE.Mesh(leafGeo,material(i%2?'#557d51':'#6b914f'));leaf.material.side=THREE.DoubleSide;leaf.castShadow=true;crown.add(leaf);
+    }
+    for(let i=0;i<3;i++) mesh('IcosahedronGeometry',[.23,0],'#777447',Math.sin(i*2)*.35,-.23,Math.cos(i*2)*.35,crown);
+    palms.push(crown);obstacles.push({x,z,r:.42*scale});
+  }
+  function house(x,z,color='#efe0b6',s=1,rotation=0) {
+    const g=new THREE.Group();g.position.set(x,ground(x,z),z);g.rotation.y=rotation;g.scale.setScalar(s);scene.add(g);
+    box(4.8,.35,3.8,'#c5c0a0',0,.18,0,g);box(4.2,2.6,3.1,color,0,1.5,0,g);
+    // A rectangular hip roof with enough overhang to cover every wall corner.
+    const roofGeo=new THREE.BufferGeometry();roofGeo.setAttribute('position',new THREE.Float32BufferAttribute([-2.9,2.7,-2.2,2.9,2.7,-2.2,2.9,2.7,2.2,-2.9,2.7,2.2,0,4.25,0],3));roofGeo.setIndex([0,4,1,1,4,2,2,4,3,3,4,0]);roofGeo.computeVertexNormals();const roof=new THREE.Mesh(roofGeo,material('#b87354'));roof.castShadow=true;g.add(roof);
+    box(.78,1.65,.08,'#4b6254',0,1.15,1.6,g);
+    for(const side of [-1,1]) {box(.8,.85,.09,'#537c71',side*1.38,1.9,1.6,g);box(.85,.09,.16,'#f3e7c4',side*1.38,1.46,1.64,g);}
+    box(5,.16,1.2,'#dfd2ae',0,.44,2.05,g);
+    for(const side of [-1,1]) rod([side*2.25,.4,2.3],[side*2.25,2.6,2.3],.07,'#e9ddba',g);
+    obstacles.push({x,z,r:2.65*s});return g;
+  }
+  function boat(x,z,rotation=0) {
+    const g=new THREE.Group();g.position.set(x,.35,z);g.rotation.y=rotation;scene.add(g);
+    const hull=mesh('CylinderGeometry',[1,1,9,8],'#795c3e',0,.1,0,g);hull.rotation.x=Math.PI/2;hull.scale.set(1.65,.95,.58);
+    box(3,.25,7.8,'#c59c61',0,.55,0,g);box(2.65,1.6,5.5,'#d8bb7c',0,1.45,0,g);
+    const roof=mesh('CylinderGeometry',[1.52,1.52,5.9,10,1,false,0,Math.PI],'#b18b52',0,2.2,0,g);roof.rotation.x=Math.PI/2;
+    for(const side of [-1,1])for(let j=-1;j<=1;j++)box(.06,.8,1.02,'#536f5b',side*1.36,1.58,j*1.48,g);
+    for(let i=0;i<8;i++) {const hoop=mesh('TorusGeometry',[1.53,.035,3,12,Math.PI],'#866940',0,2.18,-2.8+i*.8,g);hoop.rotation.z=0;}
+    rod([-1.2,.7,3.4],[-1.2,2.5,3.4],.05,'#856545',g);rod([1.2,.7,3.4],[1.2,2.5,3.4],.05,'#856545',g);box(2.9,.12,1.7,'#ba9b61',0,2.55,3.35,g);boats.push(g);
+  }
+  function fishingNet(x,z,rotation=0) {
+    const g=new THREE.Group();g.position.set(x,ground(x,z),z);g.rotation.y=rotation;scene.add(g);
+    box(4,.25,4,'#b4a078',0,.1,0,g);
+    rod([-1.4,0,0],[0,7.8,0],.13,'#7b7359',g);rod([1.4,0,0],[0,7.8,0],.13,'#7b7359',g);
+    rod([0,5,4],[0,6,-7],.12,'#6c7059',g);
+    for(const s of [-1,1]) {rod([0,6,-2],[s*4,1,-8],.09,'#797a5e',g);rod([0,6,-2],[s*3.4,1,-2],.09,'#797a5e',g);rod([0,7.8,0],[s*4,1,-8],.025,'#a7a28a',g);}
+    const pts=[];for(let i=0;i<=10;i++){const t=i/10;pts.push(-4+8*t,1,-8, -3.4+6.8*t,1,-2);pts.push(-4+.6*t,1,-8+6*t,4-.6*t,1,-8+6*t);}
+    const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));g.add(new THREE.LineSegments(geo,new THREE.LineBasicMaterial({color:'#637d70',transparent:true,opacity:.6})));
+    for(let i=0;i<3;i++)mesh('IcosahedronGeometry',[.3,0],'#626951',.4+i*.3,4-i*.7,3+i*.35,g);
+    obstacles.push({x,z,r:1.7});
+  }
+  function sign(x,z,text,sub) {
+    const y=ground(x,z);rod([x,y,z],[x,y+2.2,z],.09,'#927b55');
+    const c=document.createElement('canvas');c.width=512;c.height=144;const cx=c.getContext('2d');cx.fillStyle='#eee5c7';cx.fillRect(0,0,512,144);cx.fillStyle='#385341';cx.textAlign='center';cx.font='600 34px Segoe UI';cx.fillText(text,256,61);cx.font='24px Segoe UI';cx.fillText(sub,256,108);
+    const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;
+    const m=new THREE.Mesh(new THREE.PlaneGeometry(3.5,.985),new THREE.MeshBasicMaterial({map:texture,side:THREE.DoubleSide,toneMapped:false}));m.position.set(x,y+2.3,z);scene.add(m);
+  }
+  function buildWorld() {
+    scene=new THREE.Scene();scene.background=new THREE.Color('#c4dfd5');scene.fog=new THREE.Fog('#c4dfd5',90,230);
+    camera=new THREE.PerspectiveCamera(45,innerWidth/innerHeight,.1,350);
+    renderer=new THREE.WebGLRenderer({canvas:$('world'),antialias:true,alpha:false,powerPreference:'high-performance'});
+    renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));renderer.setSize(innerWidth,innerHeight);renderer.outputColorSpace=THREE.SRGBColorSpace;
+    renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.2;
+    scene.add(new THREE.HemisphereLight('#fff3d6','#769b83',2.5));const sun=new THREE.DirectionalLight('#ffe7bf',3);sun.position.set(-30,70,40);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-80,right:80,top:70,bottom:-70,near:1,far:180});sun.shadow.normalBias=.06;scene.add(sun);
+    water=new THREE.Mesh(new THREE.PlaneGeometry(800,800),new THREE.MeshStandardMaterial({color:'#75b4ae',roughness:.48,metalness:.12}));water.rotation.x=-Math.PI/2;water.receiveShadow=true;scene.add(water);
+    islandMesh(true);islandMesh();
+    path([[0,34],[0,20],[1,8],[-10,1],[-23,-12],[-35,-24]],2.8);
+    path([[1,8],[12,2],[25,-6],[35,-13],[45,-17]],2.8);
+    path([[-11,0],[-2,-8],[15,-10],[25,-6]],1.7);
+    // Backwater homes and coconut grove.
+    house(-7,13,'#eddbb3');house(9,15,'#e1c99e',.9,-.22);house(-10,26,'#e8d8ae',.8,.18);house(12,27,'#e6d2a2',.8,-.2);
+    for(const [x,z,s] of [[-16,17,1.3],[-14,31,1.1],[6,31,1.2],[16,23,1],[-4,31,1],[18,12,1.2],[-4,6,1],[9,5,.95],[-20,24,1.1],[25,20,1.2],[30,10,1.1],[-22,4,1.1]])palm(x,z,s);
+    // Walkable jetty extends beyond the shoreline. Planks and bollards are visual.
+    box(4,.4,14,'#b9a07b',0,.95,39);for(let i=0;i<24;i++)box(4.1,.07,.12,'#9c8769',0,1.185,32.3+i*.56);
+    for(const x of [-2,2])for(const z of [33,39,45]){rod([x,0,z],[x,1.8,z],.14,'#8a795b');}
+    boat(7,42,.16);boat(-19,45,-.42);boat(37,37,.5);
+    sign(-3,22,'BACKWATERS','Jetty ↓   ·   Tea hills ↖');sign(17,-1,'THE OLD COAST','Kochi →');sign(-22,-10,'TEA COUNTRY','Munnar ↑');
+    // Instancing keeps hundreds of tea bushes to a handful of draw calls.
+    const teaPositions=[];
+    for(let row=0;row<14;row++)for(let col=0;col<21;col++){
+      const x=-52+col*1.8,z=-32+row*1.6+Math.sin(col*.25)*1.9;
+      if(onIsland(x,z,.09)&&Math.abs(x-(-23+(z+12)*.9))>2)teaPositions.push([x,z]);
+    }
+    const bush=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,0),material('#567d44'),teaPositions.length);const dummy=new THREE.Object3D();
+    teaPositions.forEach(([x,z],i)=>{dummy.position.set(x,ground(x,z)+.4,z);dummy.scale.set(.93,.63,.64);dummy.rotation.y=random();dummy.updateMatrix();bush.setMatrixAt(i,dummy.matrix);});bush.castShadow=true;bush.receiveShadow=true;scene.add(bush);
+    house(-36,-30,'#e7dcbf',.75,.25);
+    // Kochi-inspired tiled houses and Chinese fishing nets.
+    for(const [x,z,c,s,r] of [[28,-15,'#e5d7ae',1.1,0],[36,-23,'#e9be95',1.2,.1],[43,-10,'#e3d9b5',1.1,-.2],[24,-23,'#b7cbb7',.85,0],[47,-20,'#e9dfc6',.8,.3]])house(x,z,c,s,r);
+    fishingNet(34,-31,-.2);fishingNet(43,-27,-.65);palm(29,-7,1.1);palm(40,-17,.9);palm(22,-18,1.1);palm(49,-5,1.2);
+    for(let i=0;i<30;i++){const a=random()*Math.PI*2,x=Math.cos(a)*(48+random()*10),z=Math.sin(a)*(30+random()*8);if(onIsland(x,z,.08)&&!(x<-16&&z<0))palm(x,z,.75+random()*.4);}
+    // Distant faceted mountain silhouettes.
+    for(let i=0;i<15;i++){const x=-120+i*17,z=-80-random()*25,h=15+random()*20;const m=mesh('ConeGeometry',[22+random()*10,h,5],'#8fb4a2',x,h/2-2,z);m.rotation.y=random();m.castShadow=false;}
+    // Water glints use one line draw call. Fireflies use one Points draw call.
+    const glints=[];for(let i=0;i<240;i++){const x=(random()-.5)*200,z=(random()-.5)*150;if(!onIsland(x,z,-.06))glints.push(x,.06,z,x+.4+random()*1.3,.06,z);}
+    const gg=new THREE.BufferGeometry();gg.setAttribute('position',new THREE.Float32BufferAttribute(glints,3));scene.add(new THREE.LineSegments(gg,new THREE.LineBasicMaterial({color:'#c3ded0',transparent:true,opacity:.45})));
+    const fp=[];for(let i=0;i<45;i++){const x=(random()-.5)*65,z=random()*45-15;fp.push(x,ground(x,z)+1+random()*2,z);}
+    const fg=new THREE.BufferGeometry();fg.setAttribute('position',new THREE.Float32BufferAttribute(fp,3));fireflies=new THREE.Points(fg,new THREE.PointsMaterial({color:'#fff1b0',size:.09,transparent:true,opacity:.65}));scene.add(fireflies);
+    localAvatar=avatar('#cc7e50');remoteAvatar=avatar('#557eab');remoteAvatar.visible=false;localAvatar.visible=false;
+    localPosition.y=ground(localPosition.x,localPosition.z);localAvatar.position.copy(localPosition);
+  }
+  // A simple friendly traveller: low-poly capsule, hat, backpack, and swinging feet.
+  function avatar(color) {
+    const g=new THREE.Group();scene.add(g);const body=new THREE.Group();g.add(body);g.userData.body=body;
+    mesh('CylinderGeometry',[.32,.38,.7,8],color,0,.9,0,body);mesh('SphereGeometry',[.33,8,5],color,0,1.24,0,body);
+    mesh('SphereGeometry',[.31,10,7],'#efc7a0',0,1.58,0,body);
+    mesh('CylinderGeometry',[.52,.52,.07,12],'#ecdfb4',0,1.83,0,body);mesh('CylinderGeometry',[.3,.34,.22,10],'#d4c496',0,1.96,0,body);
+    box(.43,.53,.25,'#788970',0,1.04,-.32,body);const feet=[];
+    for(const side of [-1,1]){feet.push(box(.19,.45,.24,'#4a6150',side*.19,.3,0,g));mesh('SphereGeometry',[.13,6,4],'#efc7a0',side*.4,.83,.01,body);mesh('SphereGeometry',[.028,5,4],'#394a3c',side*.11,1.6,.29,body);}
+    g.userData.feet=feet;setNametag(g,'Traveller');return g;
+  }
+  function setNametag(g,text) {
+    if(g.userData.label){const old=g.userData.label;old.material.map.dispose();old.material.dispose();g.remove(old);}
+    const c=document.createElement('canvas');c.width=384;c.height=80;const cx=c.getContext('2d');cx.fillStyle='#f8f6edef';cx.beginPath();cx.roundRect(3,3,378,70,28);cx.fill();cx.font='600 28px Segoe UI';cx.textAlign='center';cx.fillStyle='#274c3f';cx.fillText(text.slice(0,24),192,48);
+    const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;
+    const label=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,depthTest:false,depthWrite:false,toneMapped:false,fog:false}));label.position.y=2.65;label.scale.set(2.65,.55,1);g.add(label);g.userData.label=label;
+  }
+  function setAvatarColor(g,color) {g.userData.body.children.slice(0,2).forEach(m=>m.material=material(color));}
+  function walkable(x,z) {return (onIsland(x,z,.018)||(Math.abs(x)<1.65&&z>31&&z<45.6))&&!obstacles.some(o=>Math.hypot(x-o.x,z-o.z)<o.r+.35);}
+  function footHeight(x,z) {return Math.abs(x)<2&&z>32?1.2:ground(x,z);}
+  function zoneAt(x,z) {return x<-17&&z<1?1:x>20&&z<2?2:0;}
+  function updateZone() {const i=zoneAt(localPosition.x,localPosition.z);if(i!==zoneIndex){zoneIndex=i;const z=ZONES[i];$('zoneName').textContent=z.name;$('zoneKicker').textContent=z.kicker;$('zoneDescription').textContent=z.description;}}
+  function move(dt) {
+    let dx=Number(keys.has('KeyD')||keys.has('ArrowRight'))-Number(keys.has('KeyA')||keys.has('ArrowLeft'));
+    let dz=Number(keys.has('KeyS')||keys.has('ArrowDown'))-Number(keys.has('KeyW')||keys.has('ArrowUp'));
+    const moving=dx!==0||dz!==0;
+    if(moving){const length=Math.hypot(dx,dz);dx/=length;dz/=length;const vx=dx*Math.cos(yaw)+dz*Math.sin(yaw),vz=-dx*Math.sin(yaw)+dz*Math.cos(yaw),speed=keys.has('ShiftLeft')||keys.has('ShiftRight')?8:4.5;
+      const nx=localPosition.x+vx*speed*dt,nz=localPosition.z+vz*speed*dt;
+      if(walkable(nx,localPosition.z))localPosition.x=nx;if(walkable(localPosition.x,nz))localPosition.z=nz;
+      const target=Math.atan2(vx,vz);localAvatar.rotation.y+=Math.atan2(Math.sin(target-localAvatar.rotation.y),Math.cos(target-localAvatar.rotation.y))*Math.min(1,dt*14);walkPhase+=dt*10;
+    }
+    localPosition.y=footHeight(localPosition.x,localPosition.z);localAvatar.position.copy(localPosition);
+    animateAvatar(localAvatar,moving,walkPhase);updateZone();
+  }
+  function animateAvatar(g,moving,phase) {g.userData.body.position.y=moving&&!reduceMotion?Math.abs(Math.sin(phase))*.06:0;g.userData.feet.forEach((f,i)=>f.rotation.x=moving?Math.sin(phase+i*Math.PI)*.45:0);}
+  function drawMap() {
+    const cx=$('map').getContext('2d'),W=320,H=232;cx.clearRect(0,0,W,H);cx.fillStyle='#b1d0c6';cx.fillRect(0,0,W,H);
+    const point=(x,z)=>[W/2+x*2,H/2+z*2];cx.beginPath();for(let i=0;i<=100;i++){const a=i/100*Math.PI*2,[x,y]=point(Math.cos(a)*64*coastRadius(a),Math.sin(a)*43*coastRadius(a));i?cx.lineTo(x,y):cx.moveTo(x,y);}cx.fillStyle='#c9d5ae';cx.fill();
+    cx.strokeStyle='#eee6c9';cx.lineWidth=5;cx.beginPath();for(const [i,p] of [[0,[0,33]],[1,[0,8]],[2,[-35,-24]]]){const [x,y]=point(...p);i?cx.lineTo(x,y):cx.moveTo(x,y);}cx.stroke();cx.beginPath();cx.moveTo(...point(0,8));cx.lineTo(...point(40,-17));cx.stroke();
+    cx.fillStyle='#49694e';cx.font='17px Segoe UI';cx.textAlign='center';cx.fillText('Tea hills',80,63);cx.fillText('Old coast',245,78);cx.fillText('Backwaters',173,166);
+    function dot(p,color){cx.beginPath();cx.arc(...point(p.x,p.z),6,0,Math.PI*2);cx.fillStyle=color;cx.fill();cx.lineWidth=3;cx.strokeStyle='#fff8e5';cx.stroke();}
+    if(state.connected)dot(remoteAvatar.position,state.host?'#557eab':'#cc7e50');dot(localPosition,state.host?'#cc7e50':'#557eab');
+  }
+  function frame(now) {
+    requestAnimationFrame(frame);const dt=Math.min((now-lastFrame)/1000,.05);lastFrame=now;elapsed+=dt;
+    if(state.playing){move(dt);if(state.connected){const d=remoteAvatar.position.distanceTo(remoteTarget);remoteMoving=d>.055;remoteAvatar.position.lerp(remoteTarget,1-Math.exp(-12*dt));remoteAvatar.rotation.y+=Math.atan2(Math.sin(remoteRotation-remoteAvatar.rotation.y),Math.cos(remoteRotation-remoteAvatar.rotation.y))*(1-Math.exp(-14*dt));animateAvatar(remoteAvatar,remoteMoving,elapsed*10);}
+      cameraTarget.copy(localPosition);cameraTarget.y+=1.2;const wanted=new THREE.Vector3(Math.sin(yaw)*Math.cos(pitch)*distance,Math.sin(pitch)*distance,Math.cos(yaw)*Math.cos(pitch)*distance).add(cameraTarget);wanted.y=Math.max(wanted.y,ground(wanted.x,wanted.z)+2);camera.position.lerp(wanted,reduceMotion?1:1-Math.exp(-7*dt));camera.lookAt(cameraTarget);
+      if(now-lastMap>120){drawMap();lastMap=now;}
+    }else{camera.position.set(79,67,99);camera.lookAt(2,0,-2);}
+    if(!reduceMotion){boats.forEach((b,i)=>{b.position.y=.35+Math.sin(elapsed*.7+i)*.08;b.rotation.z=Math.sin(elapsed*.55+i)*.013;});palms.forEach((p,i)=>p.rotation.z=Math.sin(elapsed*.65+i)*.024);fireflies.position.y=Math.sin(elapsed*.8)*.17;}
+    renderer.render(scene,camera);
+  }
+
+  // === ROOM / DATA CHANNEL ===================================================
+  function code() {const bytes=crypto.getRandomValues(new Uint8Array(6));return Array.from(bytes,b=>ALPHABET[b%ALPHABET.length]).join('');}
+  function status(kind,text){$('connectionStatus').dataset.state=kind;$('connectionStatus').textContent=text;}
+  function trace(stage,extra=''){
+    state.connectStage=stage;
+    console.info('[somewhere:connection]',stage,{room:state.code,host:state.host,peer:state.peer?.id,remote:state.conn?.peer,rtc:state.rtcState,ice:state.iceState,extra});
+  }
+  function notice(text,sticky=false){clearTimeout(noticeTimer);$('notice').textContent=text;$('notice').hidden=false;if(!sticky)noticeTimer=setTimeout(()=>$('notice').hidden=true,7000);}
+  function line(who,text,system=false){const row=document.createElement('div');row.className='message'+(system?' system':'');if(who){const b=document.createElement('strong');b.textContent=who;row.append(b);}row.append(document.createTextNode(text));$('messages').append(row);while($('messages').children.length>80)$('messages').firstChild.remove();$('messages').scrollTop=$('messages').scrollHeight;}
+  function busy(value){$('create').disabled=value;$('join').disabled=value;}
+  function landingError(text){$('landingMessage').textContent=text;$('landingMessage').className='error';busy(false);}
+  function send(data){if(!state.conn?.open)return false;try{state.conn.send(data);return true;}catch(e){console.warn('Send failed',e);return false;}}
+  function positionPacket(){return {type:'position',seq:++state.sequence,x:localPosition.x,z:localPosition.z,r:localAvatar.rotation.y};}
+  function mediaPacket(){return {type:'media',ready:!!state.stream,settled:state.micSettled,muted:state.muted};}
+  function cleanName(name){return typeof name==='string'?name.replace(/[\u0000-\u001f\u007f]/g,'').trim().slice(0,20)||'Traveller':'Traveller';}
+  function enterWorld(){state.playing=true;$('landing').hidden=true;$('hud').hidden=false;localAvatar.visible=true;$('copyCode').textContent=state.code;$('world').focus();updateZone();}
+  function resetSession(showLanding=true){
+    state.session++;clearTimeout(state.joinTimer);clearTimeout(state.brokerTimer);clearTimeout(state.retryTimer);clearTimeout(state.voiceTimer);
+    const p=state.peer,c=state.conn,call=state.call;state.peer=null;state.conn=null;state.call=null;state.connected=false;state.voiceLive=false;state.playing=false;
+    if(c)c.close();if(call)call.close();if(p)p.destroy();if(state.stream)state.stream.getTracks().forEach(t=>t.stop());
+    state.stream=null;state.micPending=null;state.micSettled=false;state.remoteMic=null;state.muted=false;state.voiceError='';state.receivedSequence=-1;keys.clear();
+    state.connectStage='idle';state.rtcState='new';state.iceState='new';state.lastPeerError='';
+    $('remoteAudio').srcObject=null;$('hear').hidden=true;$('chatInput').disabled=true;$('sendChat').disabled=true;$('playerCount').textContent='1 / 2 here';
+    localAvatar.visible=false;remoteAvatar.visible=false;$('messages').replaceChildren();$('notice').hidden=true;
+    if(showLanding){$('landing').hidden=false;$('hud').hidden=true;busy(false);$('landingMessage').className='';$('landingMessage').textContent='Your next little escape is ready.';}
+  }
+  function start(host,collisionRetry=0){
+    const requested=$('roomInput').value.trim().toUpperCase();if(!host&&!/^[A-Z2-9]{6}$/.test(requested)){landingError('Enter the six-character code your friend shared.');return;}
+    resetSession(false);state.host=host;state.code=host?code():requested;state.name=cleanName($('nameInput').value);const session=state.session;
+    busy(true);status('connecting','Connecting');$('landingMessage').className='';$('landingMessage').textContent=host?'Creating your room…':'Looking for your friend…';
+    trace(host?'creating-room':'joining-room');
+    localPosition.set(host?-1.5:1.5,0,19);localPosition.y=footHeight(localPosition.x,localPosition.z);localAvatar.position.copy(localPosition);localAvatar.rotation.y=Math.PI;
+    setAvatarColor(localAvatar,host?'#cc7e50':'#557eab');setAvatarColor(remoteAvatar,host?'#557eab':'#cc7e50');setNametag(localAvatar,state.name+' · you');
+    // Request audio from the click, but never await permission before networking.
+    requestMic();
+    const peer=new Peer(host?PREFIX+state.code:undefined,PEER_OPTIONS);state.peer=peer;
+    state.brokerTimer=setTimeout(()=>{if(session===state.session&&!peer.open){trace('broker-timeout');failStart('The signaling server did not respond. Check your connection and try again.');}},18000);
+    peer.on('open',()=>{
+      if(session!==state.session)return;clearTimeout(state.brokerTimer);
+      trace(host?'room-registered':'guest-registered');
+      if(state.playing){status(state.connected?'connected':'connecting',state.connected?'Connected · 2 here':'Waiting for friend');return;}
+      if(host){enterWorld();status('connecting','Waiting for friend');line('','Share the room code above. Your friend will arrive by the jetty.',true);updateVoiceUI();}
+      else {trace('dialing-host',PREFIX+state.code);const c=peer.connect(PREFIX+state.code,{reliable:true,serialization:'json',metadata:{protocol:PROTOCOL}});bindConnection(c,session);state.joinTimer=setTimeout(()=>{if(session===state.session&&!state.connected){trace('join-timeout');failStart('Could not connect to that room. Keep the host tab open, check the code, or try another network. Last stage: '+state.connectStage+'; ICE: '+state.iceState+'.');}},22000);}
+    });
+    peer.on('connection',c=>{
+      if(session!==state.session||!host||c.metadata?.protocol!==PROTOCOL){reject(c,'This room uses a different version. Reload the same HTML file.');return;}
+      if(state.conn){reject(c,'This room already has two people. Ask your friend to leave before joining.');return;}
+      trace('guest-signaled',c.peer);
+      bindConnection(c,session);
+    });
+    peer.on('call',call=>{
+      // Only the admitted data-channel partner may open a microphone call.
+      if(session!==state.session||!state.connected||call.peer!==state.conn?.peer||state.call){call.close();return;}
+      bindCall(call,session);call.answer(state.stream||undefined);
+    });
+    peer.on('disconnected',()=>{
+      if(session!==state.session)return;status(state.connected?'connected':'disconnected',state.connected?'Connected · signal offline':'Signaling offline');
+      notice('Signaling connection lost. Reconnecting… Existing peer connections can stay active.');
+      state.retryTimer=setTimeout(()=>{if(session===state.session&&!peer.destroyed&&peer.disconnected)peer.reconnect();},2000);
+    });
+    peer.on('error',err=>{
+      if(session!==state.session)return;console.warn('PeerJS:',err.type,err.message);
+      state.lastPeerError=err.type+': '+err.message;trace('peer-error',state.lastPeerError);
+      if(err.type==='unavailable-id'&&host&&!state.playing&&collisionRetry<3){start(true,collisionRetry+1);return;}
+      const messages={'peer-unavailable':'Room not found. Check the code and make sure your friend still has the room open.','network':'Could not reach the signaling server. Check your internet connection.','browser-incompatible':'This browser does not support WebRTC. Try a current Chrome, Edge, Firefox, or Safari.','unavailable-id':'This room code is already in use. Create a new room.','webrtc':'The peer connection failed. Try another network; text chat needs a working data connection.'};
+      const message=messages[err.type]||'Connection error: '+err.type+'. Please reconnect or create a new room.';
+      if(!state.playing)failStart(message);else{notice(message,true);if(!state.connected)status('disconnected','Disconnected');}
+    });
+    peer.on('close',()=>{if(session===state.session){if(!state.playing)failStart('The signaling connection closed. Please try again.');else{status('disconnected','Disconnected');notice('Your room closed. Leave and create or join a room again.',true);}}});
+  }
+  function failStart(message){
+    const connection={stage:state.connectStage,rtc:state.rtcState,ice:state.iceState,lastPeerError:state.lastPeerError};
+    resetSession();Object.assign(state,{connectStage:connection.stage,rtcState:connection.rtc,iceState:connection.ice,lastPeerError:connection.lastPeerError});
+    landingError(message);
+  }
+  function reject(c,reason){const timer=setTimeout(()=>c.close(),6000);c.on('error',()=>clearTimeout(timer));c.on('open',()=>{c.send({type:'reject',reason});setTimeout(()=>{clearTimeout(timer);c.close();},500);});}
+  function bindConnection(c,session){
+    trace('binding-data-channel',c.peer);
+    state.conn=c;let accepted=false;const handshakeTimer=setTimeout(()=>{if(session===state.session&&state.conn===c&&!accepted){c.close();if(state.host)dropConnection('The visitor could not finish connecting. The room is still open.');}},15000);
+    attachRtcDiagnostics(c,session);
+    c.on('open',()=>{if(session!==state.session||state.conn!==c)return;trace('data-channel-open');send({type:'hello',protocol:PROTOCOL,name:state.name});});
+    c.on('data',data=>{
+      if(session!==state.session||state.conn!==c||!data||typeof data!=='object')return;
+      state.lastSeen=Date.now();
+      if(data.type==='reject'&&!state.host){failStart(String(data.reason).slice(0,200));return;}
+      if(data.type==='hello'&&state.host&&!accepted){trace('hello-received');if(data.protocol!==PROTOCOL){c.send({type:'reject',reason:'World versions do not match.'});c.close();return;}accepted=true;clearTimeout(handshakeTimer);state.remoteName=cleanName(data.name);send({type:'welcome',protocol:PROTOCOL,name:state.name});connected();return;}
+      if(data.type==='welcome'&&!state.host&&!accepted){trace('welcome-received');if(data.protocol!==PROTOCOL){failStart('World versions do not match. Open the same HTML file.');return;}accepted=true;clearTimeout(handshakeTimer);state.remoteName=cleanName(data.name);connected();return;}
+      if(!accepted)return;
+      switch(data.type){
+        case 'position': if([data.x,data.z,data.r,data.seq].every(Number.isFinite)&&data.seq>state.receivedSequence&&Math.abs(data.x)<70&&Math.abs(data.z)<50){state.receivedSequence=data.seq;remoteTarget.set(data.x,footHeight(data.x,data.z),data.z);remoteRotation=data.r;}break;
+        case 'chat': if(typeof data.text==='string'&&data.text.trim())line(state.remoteName,data.text.slice(0,400));break;
+        case 'media': state.remoteMic={ready:data.ready===true,settled:data.settled===true,muted:data.muted===true};updateVoiceUI();maybeCall();break;
+        case 'voice-reset': closeCall();setTimeout(()=>{if(session===state.session)maybeCall();},500);break;
+        case 'ping': send({type:'pong'});break;
+        case 'bye': dropConnection('Your friend left.');break;
+      }
+    });
+    c.on('close',()=>{clearTimeout(handshakeTimer);if(session!==state.session||state.conn!==c)return;if(!state.playing)failStart('The room connection closed. Check the code and try again.');else dropConnection('Your friend disconnected.');});
+    c.on('error',err=>{console.warn('Data channel:',err);if(session!==state.session||state.conn!==c)return;if(!state.playing)failStart('Could not open the room connection. Please try again.');else dropConnection('The connection to your friend failed.');});
+  }
+  function attachRtcDiagnostics(c,session){
+    let tries=0;
+    const attach=()=>{
+      if(session!==state.session||state.conn!==c)return;
+      const providerConnection=c.provider?._connections?.[c.peer]?.[0];
+      const pc=c.peerConnection||c._peerConnection||c._pc||providerConnection?.peerConnection;
+      if(!pc&&tries++<30){setTimeout(attach,100);return;}
+      if(!pc)return;
+      state.rtcState=pc.connectionState||state.rtcState;state.iceState=pc.iceConnectionState||state.iceState;
+      pc.addEventListener('connectionstatechange',()=>{if(session===state.session&&state.conn===c){state.rtcState=pc.connectionState;trace('rtc-'+pc.connectionState);}});
+      pc.addEventListener('iceconnectionstatechange',()=>{if(session===state.session&&state.conn===c){state.iceState=pc.iceConnectionState;trace('ice-'+pc.iceConnectionState);}});
+    };
+    attach();
+  }
+  function connected(){
+    trace('app-handshake-complete');
+    clearTimeout(state.joinTimer);state.connected=true;state.lastSeen=Date.now();state.receivedSequence=-1;state.remoteMic=null;
+    if(!state.playing)enterWorld();remoteTarget.set(state.host?1.5:-1.5,footHeight(0,19),19);remoteAvatar.position.copy(remoteTarget);remoteAvatar.visible=true;setNametag(remoteAvatar,state.remoteName);
+    status('connected','Connected · 2 here');$('playerCount').textContent='2 / 2 here';$('chatInput').disabled=false;$('sendChat').disabled=false;
+    line('',state.remoteName+' is here. Take the scenic route together.',true);notice(state.remoteName+' joined your world.');send(positionPacket());send(mediaPacket());updateVoiceUI();
+  }
+  function dropConnection(message){
+    const c=state.conn;state.conn=null;state.connected=false;state.remoteMic=null;state.receivedSequence=-1;if(c)c.close();closeCall();remoteAvatar.visible=false;
+    $('chatInput').disabled=true;$('sendChat').disabled=true;$('playerCount').textContent='1 / 2 here';
+    status('disconnected',state.host?'Disconnected · room open':'Disconnected');line('',message,true);
+    notice(message+(state.host?' Your room is still open for them to rejoin.':' Open “How to wander” and reconnect, or leave to join another room.'),true);updateVoiceUI();
+  }
+  // Send outside requestAnimationFrame, so background tabs still send heartbeats.
+  setInterval(()=>{if(state.connected&&state.conn?.open){if((state.conn.dataChannel?.bufferedAmount||0)<32768)send(positionPacket());}},1000/12);
+  setInterval(()=>{if(state.connected){send({type:'ping'});if(Date.now()-state.lastSeen>45000&&!document.hidden)dropConnection('Your friend is no longer responding.');}},4000);
+
+  // === VOICE ================================================================
+  // Media-state handshake elects exactly one caller. Host calls when both have
+  // microphones; a guest may call a listen-only host. Text never waits for audio.
+  async function requestMic(){
+    if(state.stream)return state.stream;if(state.micPending)return state.micPending;const session=state.session;
+    state.micSettled=false;updateVoiceUI();
+    const task=(async()=>{
+      try{
+        if(!isSecureContext||!navigator.mediaDevices?.getUserMedia)throw new Error('Use localhost or HTTPS to enable your microphone.');
+        const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:false});
+        if(session!==state.session){stream.getTracks().forEach(t=>t.stop());return null;}
+        state.stream=stream;state.muted=false;
+        stream.getAudioTracks().forEach(t=>t.onended=()=>{if(session!==state.session)return;state.stream=null;state.micSettled=true;closeCall();send(mediaPacket());updateVoiceUI();notice('Your microphone stopped. Click Enable mic to reconnect it.');});
+        return stream;
+      }catch(err){
+        if(session!==state.session)return null;
+        const message=err.name==='NotAllowedError'?'Microphone permission denied. Text chat is available.':err.name==='NotFoundError'?'No microphone found. Text chat is available.':err.name==='NotReadableError'?'Your microphone is busy or unavailable. Text chat is available.':err.message||'Voice unavailable. Text chat is available.';
+        $('voiceStatus').textContent=message;line('',message,true);if(state.playing)notice(message);return null;
+      }finally{if(session===state.session){state.micPending=null;state.micSettled=true;send(mediaPacket());updateVoiceUI();maybeCall();}}
+    })();state.micPending=task;return task;
+  }
+  function updateVoiceUI(){
+    $('mic').textContent=state.stream?(state.muted?'Unmute mic':'Mute mic'):'Enable mic';$('mic').setAttribute('aria-pressed',String(state.muted));
+    let text;if(!state.micSettled)text='Allow microphone access for voice';else if(!state.stream)text=state.voiceLive?'Listening only · microphone unavailable':'Microphone unavailable · text chat works';else if(!state.connected)text='Mic ready · waiting for your friend';else if(state.voiceLive)text=state.muted?'Your mic is muted':state.remoteMic?.muted?'Voice connected · friend muted':'Voice connected';else if(state.remoteMic?.settled&&!state.remoteMic.ready)text='Friend has no mic · connecting one-way audio';else text='Connecting voice…';
+    $('voiceStatus').textContent=state.connected&&state.voiceError?state.voiceError:text;
+  }
+  function maybeCall(){
+    if(!state.connected||state.call||!state.stream||!state.remoteMic?.settled||!state.peer?.open)return;
+    if(!state.host&&state.remoteMic.ready)return;
+    try{const call=state.peer.call(state.conn.peer,state.stream,{metadata:{protocol:PROTOCOL}});if(call)bindCall(call,state.session);}catch(err){console.warn(err);notice('Voice could not connect. Text chat is still available.');}
+  }
+  function bindCall(call,session){
+    state.call=call;state.voiceLive=false;state.voiceError='';
+    clearTimeout(state.voiceTimer);state.voiceTimer=setTimeout(()=>{if(session===state.session&&state.call===call&&!state.voiceLive){state.voiceError='Voice unavailable · click mic to retry';notice('Voice did not connect. Text chat still works. Click the mic button to retry.');closeCall();updateVoiceUI();}},18000);
+    call.on('stream',async stream=>{
+      if(session!==state.session||state.call!==call)return;clearTimeout(state.voiceTimer);state.voiceLive=true;$('remoteAudio').srcObject=stream;updateVoiceUI();
+      try{await $('remoteAudio').play();$('hear').hidden=true;}catch{$('hear').hidden=false;$('voiceStatus').textContent='Click Hear friend to allow audio playback';}
+    });
+    call.on('close',()=>{if(session===state.session&&state.call===call){state.call=null;state.voiceLive=false;clearTimeout(state.voiceTimer);$('remoteAudio').srcObject=null;updateVoiceUI();if(state.connected){$('voiceStatus').textContent='Voice ended · click mic to retry';}}});
+    call.on('error',err=>{console.warn('Voice:',err);if(session===state.session&&state.call===call){closeCall();updateVoiceUI();$('voiceStatus').textContent='Voice failed · text chat is available';notice('Voice failed. Click the mic button to retry; text chat still works.');}});
+  }
+  function closeCall(){clearTimeout(state.voiceTimer);const call=state.call;state.call=null;state.voiceLive=false;if(call)call.close();$('remoteAudio').srcObject=null;$('hear').hidden=true;}
+  async function toggleMic(){
+    if(!state.stream){await requestMic();if(state.stream&&state.connected){send({type:'voice-reset'});closeCall();setTimeout(maybeCall,600);}return;}
+    if(state.connected&&!state.call){send({type:'voice-reset'});setTimeout(maybeCall,600);return;}
+    state.muted=!state.muted;state.stream.getAudioTracks().forEach(t=>t.enabled=!state.muted);send(mediaPacket());updateVoiceUI();
+  }
+
+  // === UI / INPUT ===========================================================
+  $('create').onclick=()=>start(true);$('joinForm').onsubmit=e=>{e.preventDefault();start(false);};
+  $('leave').onclick=()=>{send({type:'bye'});resetSession();};$('mic').onclick=toggleMic;
+  $('hear').onclick=async()=>{try{await $('remoteAudio').play();$('hear').hidden=true;updateVoiceUI();}catch{notice('Audio playback is blocked. Allow sound for this site in your browser.');}};
+  $('chatForm').onsubmit=e=>{e.preventDefault();const text=$('chatInput').value.trim().slice(0,400);if(text&&state.connected&&send({type:'chat',text})){line('You',text);$('chatInput').value='';}};
+  async function copy(text,label){try{await navigator.clipboard.writeText(text);notice(label);}catch{notice('Copy this: '+text,true);}}
+  $('copyCode').onclick=()=>copy(state.code,'Room code copied. Send it to your friend.');
+  $('copyLink').onclick=()=>{const url=new URL(location.href);url.hash='room='+state.code;if(url.protocol==='file:'){notice('A file link only works on your computer. Share code '+state.code+' and the HTML file, or host it on HTTPS.',true);return;}copy(url.href,location.hostname==='localhost'||location.hostname==='127.0.0.1'?'Local invite copied. It works in another tab on this computer.':'Invite link copied.');};
+  $('reconnect').onclick=()=>{if(state.connected){notice('You are already connected to your friend.');return;}if(state.host&&state.peer&&!state.peer.destroyed){if(state.peer.disconnected)state.peer.reconnect();else notice('Your room is open. Ask your friend to join code '+state.code+'.');}else{$('roomInput').value=state.code;start(state.host);} };
+  window.addEventListener('keydown',e=>{
+    if(!state.playing)return;const editing=/INPUT|TEXTAREA/.test(e.target.tagName);
+    if(e.code==='Escape'){e.target.blur();$('world').focus();$('help').open=false;keys.clear();return;}
+    if(editing)return;if(e.code==='Enter'){if(state.connected){e.preventDefault();$('chatInput').focus();}return;}
+    if(e.code==='KeyM'&&!e.repeat){e.preventDefault();toggleMic();return;}
+    if(['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','ShiftLeft','ShiftRight'].includes(e.code)){e.preventDefault();keys.add(e.code);}
+  });window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>keys.clear());
+  document.addEventListener('visibilitychange',()=>{keys.clear();lastFrame=performance.now();if(!document.hidden&&state.connected){state.lastSeen=Date.now();send(positionPacket());send({type:'ping'});}});
+  document.addEventListener('focusin',e=>{if(/INPUT|TEXTAREA/.test(e.target.tagName))keys.clear();});
+  $('world').addEventListener('pointerdown',e=>{if(state.playing){$('world').focus();drag={x:e.clientX,y:e.clientY};$('world').setPointerCapture(e.pointerId);}});
+  $('world').addEventListener('pointermove',e=>{if(drag){yaw-=(e.clientX-drag.x)*.006;pitch=Math.max(.24,Math.min(1.12,pitch+(e.clientY-drag.y)*.004));drag={x:e.clientX,y:e.clientY};}});
+  $('world').addEventListener('pointerup',()=>drag=null);$('world').addEventListener('pointercancel',()=>drag=null);
+  $('world').addEventListener('wheel',e=>{if(state.playing){e.preventDefault();distance=Math.max(7,Math.min(29,distance+e.deltaY*.015));}},{passive:false});
+  document.querySelectorAll('[data-key]').forEach(b=>{b.onpointerdown=e=>{e.preventDefault();b.setPointerCapture(e.pointerId);keys.add(b.dataset.key);};b.onpointerup=b.onpointercancel=()=>keys.delete(b.dataset.key);});
+  window.addEventListener('resize',()=>{if(renderer){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);}});
+  window.addEventListener('pagehide',()=>{send({type:'bye'});resetSession(false);});
+  $('world').addEventListener('webglcontextlost',e=>{e.preventDefault();$('fatal').hidden=false;$('fatal').textContent='The graphics context was lost. Reload this page to return to the world.';});
+  const invite=new URLSearchParams(location.hash.slice(1)).get('room');if(invite)$('roomInput').value=invite.toUpperCase().slice(0,6);
+  try {buildWorld();busy(false);$('landingMessage').textContent='Free to wander. Bring one friend.';requestAnimationFrame(frame);}catch(err){console.error(err);$('fatal').hidden=false;$('fatal').textContent='Could not start 3D graphics. Enable hardware acceleration or try another browser. '+err.message;}
+  // Read-only diagnostics make real connections and render performance inspectable.
+  window.somewhereDiagnostics=()=>({room:state.code,host:state.host,connected:state.connected,connection:{stage:state.connectStage,rtc:state.rtcState,ice:state.iceState,lastPeerError:state.lastPeerError},local:{x:localPosition.x,z:localPosition.z},remote:{x:remoteAvatar.position.x,z:remoteAvatar.position.z,visible:remoteAvatar.visible},voice:{microphone:!!state.stream,muted:state.muted,call:!!state.call,receiving:state.voiceLive,playback:!$('remoteAudio').paused},peer:state.peer?.id,zone:ZONES[zoneAt(localPosition.x,localPosition.z)].name,drawCalls:renderer?.info.render.calls,triangles:renderer?.info.render.triangles});
+})();
+</script>
+</body>
+</html>
