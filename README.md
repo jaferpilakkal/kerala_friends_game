@@ -28,7 +28,7 @@ A complete two-player, single-file exploration prototype. **`index.html` is the 
 
 ## Share with another device
 
-- Serve this exact `index.html` from any static **HTTPS** host. Both people open that page; the creator shares the room code or **Invite link**. No server-side application, API key, account, or database is required.
+- Serve this exact `index.html` from any static **HTTPS** host. Both people open that page; the creator shares the room code or **Invite link**. Players need no account. The site owner supplies the TURN service credentials used when a direct connection is unavailable.
 - Alternatively, send your friend the HTML file and have each computer serve its own copy on localhost. Matching room codes work across machines because signaling uses the public broker, even if the page URLs differ.
 - A `localhost` invite link refers to the recipient's own computer; it is not a public share link. The app warns when copying one.
 - The host must keep the room tab open. Rooms and messages are temporary, with no persisted history. Only two peers are admitted.
@@ -55,7 +55,9 @@ Follow the pale path northwest to the Munnar-inspired tea hills or northeast to 
 - **Voice:** real `getUserMedia`, `peer.call(stream)`, `call.answer(stream)`, and remote audio playback. A media-state handshake selects one caller and supports listening when one person has no microphone. Permission requests do not block joining or text chat.
 - **Room failures:** missing code, full room, signaling timeout, connection loss, and unsupported browser produce visible messages. Guests can use **How to wander → Reconnect**; hosts retain the room when a guest leaves.
 
-The free broker handles discovery/signaling. It does **not guarantee connectivity through every firewall or NAT**. This file uses public STUN servers and direct peer connections; it does not include a private TURN relay. Some corporate networks, VPNs, or restrictive mobile networks may block data and voice. Try a different network. If **only voice** fails, text chat continues over the established data channel. If the data channel itself cannot connect, text cannot connect either. Broker availability is also external to this file.
+The free broker handles discovery/signaling. Networks that prevent direct WebRTC connections need a working TURN relay for movement, chat, and voice. `PEER_OPTIONS.config.iceServers` in `index.html` uses the site owner's Metered TURN credentials, with UDP, TCP, and TLS on port 443. These replace the legacy shared OpenRelay endpoints, which returned zero relay candidates in testing. A passing same-machine or same-Wi-Fi test alone does not verify the TURN fallback.
+
+[Metered's OpenRelay instructions](https://www.metered.ca/tools/openrelay/) explain how to obtain replacement credentials. TURN credentials in this static app are visible to browsers; the provider management API key is not included. Keep the credentials active and monitor their service quota. If only voice fails, text can continue; if the data channel cannot connect, text cannot connect either.
 
 PeerJS API reference: https://peerjs.com/client/api/peer
 
@@ -75,5 +77,17 @@ The inline code is divided into configuration, world generation, room/data conne
 `test-browser.cjs` is a development check, **not an application dependency**. Its Playwright path points to the bundled runtime on the development computer; replace that require path with your installed `playwright` package if rerunning elsewhere.
 
 The browser test uses the real CDN builds and public PeerJS broker. It verifies creation/join, movement both ways, text both ways, received audio RTP packets in both directions, mute/unmute, a third-player rejection, disconnect/rejoin, microphone-denied chat fallback, listen-only audio, and an unknown room code. Automated audio input is synthetic; human audibility and echo behavior should also be checked using the checklist above.
+
+To test TURN allocation independently, run `node test-turn.cjs`. It reads the application's configured TURN servers, counts relay candidates, and prints errors without logging addresses or credentials. Zero candidates is a failure.
+
+To prevent direct connections from hiding a broken relay, run the full browser test in PowerShell with:
+
+```powershell
+$env:RELAY_ONLY='1'
+$env:TEST_URL='https://kerala-friends-game.pjaferparappoor.workers.dev/'
+node test-browser.cjs
+```
+
+This forces TURN for data and voice, and verifies that both peers selected relay candidates. Remove the `RELAY_ONLY` environment variable to restore the ordinary test. A successful forced-relay test is still followed by a real mobile-data test.
 
 These checks passed in Chrome on the development machine. `test-exploration.cjs` also walked from the jetty to the tea hills and coastal town using keyboard input, verified zone changes, and checked that the mobile session controls and help menu do not overlap. Screenshots alongside the file show the tested views.
